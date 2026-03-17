@@ -12,6 +12,39 @@ const TESTIMONIALS_COUNT = 4;
 // API base URL — empty string in dev (uses Vite proxy), full URL in production
 const API_BASE = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL : '';
 
+function formatAuthError(error: unknown) {
+  const code = typeof error === 'object' && error && 'code' in error ? String((error as { code?: unknown }).code || '') : '';
+  const rawMessage = typeof error === 'object' && error && 'message' in error ? String((error as { message?: unknown }).message || '') : '';
+  const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+
+  switch (code) {
+    case 'auth/invalid-credential':
+    case 'auth/invalid-login-credentials':
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+      return 'Invalid email or password.';
+    case 'auth/email-already-in-use':
+      return 'An account with this email already exists. Sign in instead.';
+    case 'auth/too-many-requests':
+      return 'Too many attempts. Wait a minute and try again.';
+    case 'auth/popup-blocked':
+      return 'Your browser blocked the sign-in popup. Allow popups and try again.';
+    case 'auth/popup-closed-by-user':
+      return 'The sign-in popup was closed before authentication completed.';
+    case 'auth/unauthorized-domain':
+      return `This domain is not authorized in Firebase Authentication. Add ${hostname || 'your domain'} in Firebase Console > Authentication > Settings > Authorized domains.`;
+    case 'auth/operation-not-allowed':
+      return 'This sign-in method is not enabled in Firebase Authentication.';
+    case 'auth/invalid-api-key':
+    case 'auth/app-not-authorized':
+      return 'Firebase client configuration is invalid for this environment. Check the VITE_FIREBASE_* values used in production.';
+    case 'auth/network-request-failed':
+      return 'Network request failed. Check your connection and try again.';
+    default:
+      return rawMessage.replace('Firebase: ', '') || 'Authentication failed';
+  }
+}
+
 interface AppState {
   // ── Auth ────────────────────────────────────────────
   user: User | null;
@@ -253,7 +286,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
     } catch (e: any) {
       const newAttempts = failedAttempts + 1;
       const lockout = newAttempts >= 5 ? Date.now() + 60000 * Math.min(newAttempts - 4, 5) : null;
-      const msg = e.message?.replace('Firebase: ', '') || 'Authentication failed';
+      const msg = formatAuthError(e);
       set({ authError: newAttempts >= 5 ? `Account temporarily locked. Too many failed attempts. Try again in ${Math.min(newAttempts - 4, 5)} minute(s).` : msg, failedAttempts: newAttempts, lockoutUntil: lockout });
       try { localStorage.setItem('shipsaas_lockout', JSON.stringify({ failedAttempts: newAttempts, lockoutUntil: lockout })); } catch {}
     } finally {
@@ -267,7 +300,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
       await signInWithApple();
       set({ step: 1 });
     } catch (e: any) {
-      set({ authError: e.message?.replace('Firebase: ', '') || 'Apple login failed' });
+      set({ authError: formatAuthError(e) });
     } finally {
       set({ authBusy: false });
     }
@@ -279,7 +312,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
       await signInWithGoogle();
       set({ step: 1 });
     } catch (e: any) {
-      set({ authError: e.message?.replace('Firebase: ', '') || 'Google login failed' });
+      set({ authError: formatAuthError(e) });
     } finally {
       set({ authBusy: false });
     }
