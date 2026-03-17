@@ -6,7 +6,7 @@
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "server": "node server.js",
     "client": "cd frontend && npm run dev",
-    "build": "cd frontend && npm run build",
+    "build": "cd frontend && npm install && npm run build",
     "preview": "cd frontend && npm run preview",
     "deploy:rules": "firebase deploy --only firestore:rules",
     "deploy:hosting": "npm run build && firebase deploy --only hosting",
