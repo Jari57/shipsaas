@@ -1,5 +1,7 @@
 import {
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
@@ -8,6 +10,7 @@ import {
   sendPasswordResetEmail as firebaseSendPasswordReset,
   sendEmailVerification as firebaseSendEmailVerification,
   type User,
+  type AuthProvider,
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, googleProvider, appleProvider } from '../lib/firebase';
@@ -36,16 +39,34 @@ export async function resendVerificationEmail() {
   }
 }
 
+async function popupWithFallback(provider: AuthProvider) {
+  try {
+    const cred = await signInWithPopup(auth, provider);
+    await createUserDoc(cred.user);
+    return cred.user;
+  } catch (e: any) {
+    if (e.code === 'auth/unauthorized-domain' || e.code === 'auth/popup-blocked') {
+      await signInWithRedirect(auth, provider);
+      return null;
+    }
+    throw e;
+  }
+}
+
 export async function signInWithApple() {
-  const cred = await signInWithPopup(auth, appleProvider);
-  await createUserDoc(cred.user);
-  return cred.user;
+  return popupWithFallback(appleProvider);
 }
 
 export async function signInWithGoogle() {
-  const cred = await signInWithPopup(auth, googleProvider);
-  await createUserDoc(cred.user);
-  return cred.user;
+  return popupWithFallback(googleProvider);
+}
+
+export async function handleRedirectResult() {
+  const result = await getRedirectResult(auth);
+  if (result?.user) {
+    await createUserDoc(result.user);
+  }
+  return result;
 }
 
 export async function signOut() {

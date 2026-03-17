@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { User } from 'firebase/auth';
-import { signUpWithEmail, signInWithEmail, signInWithApple, signInWithGoogle, signOut, onAuth, deleteAccount, sendPasswordReset, resendVerificationEmail } from '../services/auth';
+import { signUpWithEmail, signInWithEmail, signInWithApple, signInWithGoogle, signOut, onAuth, deleteAccount, sendPasswordReset, resendVerificationEmail, handleRedirectResult } from '../services/auth';
 import { generateAppCode } from '../services/gemini';
 import { saveProject, getUserProjects, updateProject, removeProject, saveApiKeys, loadApiKeys, loadUserProfile, saveProfileName, type ProjectDoc } from '../services/projects';
 import { verifyIntegration, searchDomains as searchDomainsApi, type IntegrationStatus, type DomainResult } from '../services/integrations';
@@ -32,7 +32,7 @@ function formatAuthError(error: unknown) {
     case 'auth/popup-closed-by-user':
       return 'The sign-in popup was closed before authentication completed.';
     case 'auth/unauthorized-domain':
-      return `This domain is not authorized in Firebase Authentication. Add ${hostname || 'your domain'} in Firebase Console > Authentication > Settings > Authorized domains.`;
+      return 'Google/Apple sign-in is currently unavailable on this domain. Please use email and password to sign in.';
     case 'auth/operation-not-allowed':
       return 'This sign-in method is not enabled in Firebase Authentication.';
     case 'auth/invalid-api-key':
@@ -297,8 +297,9 @@ export const useAppStore = create<AppState>()((set, get) => ({
   handleAppleAuth: async () => {
     set({ authError: '', authBusy: true });
     try {
-      await signInWithApple();
-      set({ step: 1 });
+      const user = await signInWithApple();
+      if (user) set({ step: 1 });
+      // null means redirect initiated — page will reload
     } catch (e: any) {
       set({ authError: formatAuthError(e) });
     } finally {
@@ -309,8 +310,9 @@ export const useAppStore = create<AppState>()((set, get) => ({
   handleGoogleAuth: async () => {
     set({ authError: '', authBusy: true });
     try {
-      await signInWithGoogle();
-      set({ step: 1 });
+      const user = await signInWithGoogle();
+      if (user) set({ step: 1 });
+      // null means redirect initiated — page will reload
     } catch (e: any) {
       set({ authError: formatAuthError(e) });
     } finally {
@@ -766,6 +768,15 @@ export const useAppStore = create<AppState>()((set, get) => ({
     } catch {}
     return onAuth(async (u) => {
       set({ user: u, authLoading: false });
+      if (!u) {
+        // Check for redirect result (Google/Apple redirect sign-in)
+        try {
+          const result = await handleRedirectResult();
+          if (result?.user) {
+            set({ user: result.user, step: 1 });
+          }
+        } catch {}
+      }
       if (u) {
         if (get().step === 0) set({ step: 1 });
         // Load persisted projects
