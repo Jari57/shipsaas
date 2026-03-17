@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { User } from 'firebase/auth';
-import { signUpWithEmail, signInWithEmail, signInWithApple, signInWithGoogle, signOut, onAuth, deleteAccount } from '../services/auth';
+import { signUpWithEmail, signInWithEmail, signInWithApple, signInWithGoogle, signOut, onAuth, deleteAccount, sendPasswordReset, resendVerificationEmail } from '../services/auth';
 import { generateAppCode } from '../services/gemini';
 import { saveProject, getUserProjects, updateProject, saveApiKeys, loadApiKeys, loadUserProfile, saveProfileName, type ProjectDoc } from '../services/projects';
 import type { Blueprint, ShippedProject, ViewType } from '../types';
@@ -18,23 +18,36 @@ interface AppState {
   authMode: 'signin' | 'signup';
   email: string;
   password: string;
+  confirmPassword: string;
   showPassword: boolean;
   authError: string;
   authBusy: boolean;
+  termsAccepted: boolean;
+  forgotPasswordMode: boolean;
+  resetEmailSent: boolean;
+  failedAttempts: number;
+  lockoutUntil: number | null;
+  verificationSent: boolean;
 
   setUser: (v: User | null) => void;
   setAuthLoading: (v: boolean) => void;
   setAuthMode: (v: 'signin' | 'signup') => void;
   setEmail: (v: string) => void;
   setPassword: (v: string) => void;
+  setConfirmPassword: (v: string) => void;
   setShowPassword: (v: boolean) => void;
   setAuthError: (v: string) => void;
   setAuthBusy: (v: boolean) => void;
+  setTermsAccepted: (v: boolean) => void;
+  setForgotPasswordMode: (v: boolean) => void;
+  setResetEmailSent: (v: boolean) => void;
 
   handleEmailAuth: () => Promise<void>;
   handleAppleAuth: () => Promise<void>;
   handleGoogleAuth: () => Promise<void>;
   handleSignOut: () => void;
+  handleForgotPassword: () => Promise<void>;
+  handleResendVerification: () => Promise<void>;
 
   // ── Navigation ──────────────────────────────────────
   step: number;
@@ -152,31 +165,85 @@ export const useAppStore = create<AppState>()((set, get) => ({
   authMode: 'signup',
   email: '',
   password: '',
+  confirmPassword: '',
   showPassword: false,
   authError: '',
   authBusy: false,
+  termsAccepted: false,
+  forgotPasswordMode: false,
+  resetEmailSent: false,
+  failedAttempts: 0,
+  lockoutUntil: null,
+  verificationSent: false,
 
   setUser: (v) => set({ user: v }),
   setAuthLoading: (v) => set({ authLoading: v }),
-  setAuthMode: (v) => set({ authMode: v }),
+  setAuthMode: (v) => set({ authMode: v, authError: '', forgotPasswordMode: false, resetEmailSent: false }),
   setEmail: (v) => set({ email: v }),
   setPassword: (v) => set({ password: v }),
+  setConfirmPassword: (v) => set({ confirmPassword: v }),
   setShowPassword: (v) => set({ showPassword: v }),
   setAuthError: (v) => set({ authError: v }),
   setAuthBusy: (v) => set({ authBusy: v }),
+  setTermsAccepted: (v) => set({ termsAccepted: v }),
+  setForgotPasswordMode: (v) => set({ forgotPasswordMode: v, authError: '', resetEmailSent: false }),
+  setResetEmailSent: (v) => set({ resetEmailSent: v }),
 
   handleEmailAuth: async () => {
+    const { authMode, email, password, confirmPassword, termsAccepted, lockoutUntil, failedAttempts } = get();
+    // Check lockout
+    if (lockoutUntil && Date.now() < lockoutUntil) {
+      const remaining = Math.ceil((lockoutUntil - Date.now()) / 1000);
+      set({ authError: `Too many failed attempts. Try again in ${remaining}s.` });
+      return;
+    }
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      set({ authError: 'Please enter a valid email address.' });
+      return;
+    }
+    // Signup validations
+    if (authMode === 'signup') {
+      if (password.length < 8) {
+        set({ authError: 'Password must be at least 8 characters.' });
+        return;
+      }
+      if (!/[A-Z]/.test(password)) {
+        set({ authError: 'Password must contain an uppercase letter.' });
+        return;
+      }
+      if (!/[0-9]/.test(password)) {
+        set({ authError: 'Password must contain a number.' });
+        return;
+      }
+      if (!/[!@#$%^&*(),.?":{}|<>_\-+=]/.test(password)) {
+        set({ authError: 'Password must contain a special character.' });
+        return;
+      }
+      if (password !== confirmPassword) {
+        set({ authError: 'Passwords do not match.' });
+        return;
+      }
+      if (!termsAccepted) {
+        set({ authError: 'You must accept the Terms of Service and Privacy Policy.' });
+        return;
+      }
+    }
     set({ authError: '', authBusy: true });
     try {
-      const { authMode, email, password } = get();
       if (authMode === 'signup') {
         await signUpWithEmail(email, password);
+        set({ verificationSent: true });
       } else {
         await signInWithEmail(email, password);
       }
-      set({ step: 1 });
+      set({ step: 1, failedAttempts: 0, lockoutUntil: null });
     } catch (e: any) {
-      set({ authError: e.message?.replace('Firebase: ', '') || 'Authentication failed' });
+      const newAttempts = failedAttempts + 1;
+      const lockout = newAttempts >= 5 ? Date.now() + 60000 * Math.min(newAttempts - 4, 5) : null;
+      const msg = e.message?.replace('Firebase: ', '') || 'Authentication failed';
+      set({ authError: newAttempts >= 5 ? `Account temporarily locked. Too many failed attempts. Try again in ${Math.min(newAttempts - 4, 5)} minute(s).` : msg, failedAttempts: newAttempts, lockoutUntil: lockout });
     } finally {
       set({ authBusy: false });
     }
@@ -201,6 +268,37 @@ export const useAppStore = create<AppState>()((set, get) => ({
       set({ step: 1 });
     } catch (e: any) {
       set({ authError: e.message?.replace('Firebase: ', '') || 'Google login failed' });
+    } finally {
+      set({ authBusy: false });
+    }
+  },
+
+  handleForgotPassword: async () => {
+    const { email } = get();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      set({ authError: 'Please enter your email address above.' });
+      return;
+    }
+    set({ authBusy: true, authError: '' });
+    try {
+      await sendPasswordReset(email);
+      set({ resetEmailSent: true });
+    } catch {
+      // Don't reveal whether email exists - always show success
+      set({ resetEmailSent: true });
+    } finally {
+      set({ authBusy: false });
+    }
+  },
+
+  handleResendVerification: async () => {
+    set({ authBusy: true });
+    try {
+      await resendVerificationEmail();
+      set({ verificationSent: true });
+    } catch {
+      // Silent fail
     } finally {
       set({ authBusy: false });
     }

@@ -5,6 +5,8 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
   deleteUser,
+  sendPasswordResetEmail as firebaseSendPasswordReset,
+  sendEmailVerification as firebaseSendEmailVerification,
   type User,
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
@@ -13,12 +15,25 @@ import { auth, db, googleProvider, appleProvider } from '../lib/firebase';
 export async function signUpWithEmail(email: string, password: string) {
   const cred = await createUserWithEmailAndPassword(auth, email, password);
   await createUserDoc(cred.user);
+  // Send email verification after signup
+  await firebaseSendEmailVerification(cred.user);
   return cred.user;
 }
 
 export async function signInWithEmail(email: string, password: string) {
   const cred = await signInWithEmailAndPassword(auth, email, password);
   return cred.user;
+}
+
+export async function sendPasswordReset(email: string) {
+  await firebaseSendPasswordReset(auth, email);
+}
+
+export async function resendVerificationEmail() {
+  const user = auth.currentUser;
+  if (user) {
+    await firebaseSendEmailVerification(user);
+  }
 }
 
 export async function signInWithApple() {
