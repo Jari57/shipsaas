@@ -327,7 +327,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
   setStep: (v) => set({ step: v }),
   setView: (v) => set({ view: v }),
-  next: () => set(s => ({ step: Math.min(s.step + 1, 6) })),
+  next: () => set(s => ({ step: Math.min(s.step + 1, 3) })),
   back: () => set(s => ({ step: Math.max(s.step - 1, 0) })),
 
   // ── Offline state ──────────────────────────────────
@@ -366,7 +366,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   setShippedProjects: (v) => set({ shippedProjects: v }),
 
   handleDeploy: async () => {
-    set({ isDeploying: true, step: 6, deployLogs: [] });
+    set({ isDeploying: true, step: 3, deployLogs: [] });
     const log = (msg: string) => set(s => ({ deployLogs: [...s.deployLogs, msg] }));
 
     const { user, blueprint, apiKeys } = get();
@@ -551,7 +551,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
             appName: b.appName || prev.appName,
             projectId: b.projectId || prev.projectId,
             source: (['github', 'zip', 'template'].includes(b.source) ? b.source : 'template') as Blueprint['source'],
-            hosting: b.hosting || 'vercel',
+            hosting: 'vercel',
             style: (['minimal', 'brutalist', 'editorial', 'glassmorphism'].includes(b.style) ? b.style : 'minimal') as Blueprint['style'],
             color: b.color || '#10b981',
             appType: (['web', 'mobile'].includes(b.appType) ? b.appType : 'web') as Blueprint['appType'],
@@ -560,7 +560,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
             domain: b.domain || undefined,
           },
           autoMode: true,
-          step: 5,
+          step: 2,
         });
         if (b.domain) set({ domainSearch: b.domain });
         if (b.reasoning) set({ aiReasoning: b.reasoning });

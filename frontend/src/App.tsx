@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Rocket, 
   Database, 
-  Smartphone, 
   CheckCircle2, 
   Loader2,
   Code,
@@ -86,10 +85,7 @@ import { useAppStore } from './stores/useAppStore';
 const ONBOARDING_STEPS = [
   { id: 'auth',      label: 'Account',   icon: Lock },
   { id: 'source',    label: 'Source',     icon: Code },
-  { id: 'domain',    label: 'Domain',     icon: Globe },
-  { id: 'hosting',   label: 'Hosting',    icon: Cpu },
   { id: 'configure', label: 'Configure',  icon: Sparkles },
-  { id: 'plan',      label: 'Plan',       icon: CreditCard },
   { id: 'deploy',    label: 'Deploy',     icon: Rocket },
 ];
 
@@ -103,48 +99,12 @@ const HOSTING_PROVIDERS = [
     features: ['Edge Functions', 'Analytics', 'DDoS Protection'],
     popular: true
   },
-  {
-    id: 'netlify',
-    name: 'Netlify',
-    price: '$19/mo',
-    rating: 4.7,
-    description: 'Excellent for static sites and serverless functions.',
-    features: ['Forms', 'Identity', 'Split Testing'],
-    popular: false
-  },
-  {
-    id: 'railway',
-    name: 'Railway',
-    price: '$5/mo+',
-    rating: 4.8,
-    description: 'Deploy instantly from GitHub. Great DX.',
-    features: ['Auto Deploy', 'Databases', 'Cron Jobs'],
-    popular: true
-  },
-  {
-    id: 'aws',
-    name: 'AWS Amplify',
-    price: 'Pay-as-you-go',
-    rating: 4.5,
-    description: 'Enterprise grade scalability and deep AWS integration.',
-    features: ['CI/CD', 'Auth', 'Storage'],
-    popular: false
-  },
-  {
-    id: 'digitalocean',
-    name: 'DigitalOcean',
-    price: '$5/mo+',
-    rating: 4.6,
-    description: 'Simple, predictable pricing for developers.',
-    features: ['App Platform', 'Droplets', 'Managed DB'],
-    popular: false
-  }
 ];
 
 const PLANS = [
   {
     id: 'starter' as const,
-    name: 'Starter',
+    name: 'Free',
     price: 'Free',
     period: '',
     description: 'Everything you need to ship.',
@@ -152,28 +112,6 @@ const PLANS = [
     cta: 'Current Plan',
     highlighted: true,
     available: true,
-  },
-  {
-    id: 'pro' as const,
-    name: 'Pro',
-    price: '$29',
-    period: '/mo',
-    description: 'For teams shipping fast.',
-    features: ['Custom domains', 'Priority support', 'Analytics dashboard', 'GitHub CI/CD', 'Advanced templates'],
-    cta: 'Coming Soon',
-    highlighted: false,
-    available: false,
-  },
-  {
-    id: 'agency' as const,
-    name: 'Agency',
-    price: '$99',
-    period: '/mo',
-    description: 'For agencies at scale.',
-    features: ['White-label', 'Dedicated support', 'Custom templates', 'Team accounts', 'API access', 'Priority builds'],
-    cta: 'Coming Soon',
-    highlighted: false,
-    available: false,
   },
 ];
 
@@ -186,51 +124,18 @@ const TEMPLATES = [
     partial: { style: 'minimal' as const, color: '#3b82f6', appType: 'web' as const, authEnabled: true },
   },
   {
-    id: 'mobile-app',
-    name: 'Mobile App',
-    description: 'Native wrapper with Capacitor.',
-    icon: Smartphone,
-    partial: { style: 'brutalist' as const, color: '#10b981', appType: 'mobile' as const, authEnabled: true },
-  },
-  {
     id: 'portfolio',
     name: 'Creative Portfolio',
     description: 'High-end editorial layout.',
     icon: Sparkles,
     partial: { style: 'editorial' as const, color: '#8b5cf6', appType: 'web' as const, authEnabled: false },
   },
-];
-
-// ─── Testimonials ───────────────────────────────────────
-
-const TESTIMONIALS = [
   {
-    name: 'Sarah Chen',
-    role: 'CTO, LaunchPad Studios',
-    quote: 'ShipSaaS replaced our entire DevOps pipeline. We went from 3 days to deploy to under 2 minutes.',
-    avatar: 'SC',
-    color: 'from-emerald-400 to-teal-500',
-  },
-  {
-    name: 'Marcus Rivera',
-    role: 'Founder, Riviera Digital',
-    quote: "The AI stack recommendations alone saved us weeks of research. It's like having a senior architect on demand.",
-    avatar: 'MR',
-    color: 'from-blue-400 to-indigo-500',
-  },
-  {
-    name: 'Aisha Patel',
-    role: 'Lead Engineer, NovaTech',
-    quote: 'We shipped 14 client projects in one month. The template system is insanely fast.',
-    avatar: 'AP',
-    color: 'from-purple-400 to-pink-500',
-  },
-  {
-    name: 'Jake Thompson',
-    role: 'Agency Owner, ThompsonDev',
-    quote: 'White-label deployments for our clients take 5 minutes now. Game-changing for agency workflows.',
-    avatar: 'JT',
-    color: 'from-amber-400 to-orange-500',
+    id: 'landing-page',
+    name: 'Landing Page',
+    description: 'Clean marketing page with CTAs.',
+    icon: Globe,
+    partial: { style: 'glassmorphism' as const, color: '#10b981', appType: 'web' as const, authEnabled: false },
   },
 ];
 
@@ -736,7 +641,7 @@ export default function App() {
     blueprint, uploadedFile, githubUrl,
     isDeploying, deployLogs, generatedCode, shippedProjects,
     domainSearch, autoMode, autoLoading, projectDescription, reviewEditing, aiReasoning,
-    helpOpen, helpSection, aiAdvisorOpen, aiQuery, aiLoading, aiResult, testimonialIdx,
+    helpOpen, helpSection, aiAdvisorOpen, aiQuery, aiLoading, aiResult,
     tourActive, tourStep,
     profileName, profileSaved, apiKeys,
     integrationStatus, domainResults, domainSearchLoading,
@@ -748,7 +653,6 @@ export default function App() {
     setDeployLogs, setGeneratedCode,
     setDomainSearch, setAutoMode, setProjectDescription, setReviewEditing,
     setHelpOpen, setHelpSection, setAiAdvisorOpen, setAiQuery,
-    setTestimonialIdx,
     setTourActive, setTourStep,
     setProfileName, setProfileSaved,
     setDeleteConfirm,
@@ -756,7 +660,7 @@ export default function App() {
     handleDeploy, handleAiRecommend, handleAutoSetup, handleDeleteAccount,
     handleDeleteProject, handleForgotPassword, handleResendVerification,
     handleVerifyIntegration, handleDisconnectIntegration, handleSearchDomains,
-    next, back, updateApiKey, nextTourStep, prevTourStep, rotateTestimonial,
+    next, back, updateApiKey, nextTourStep, prevTourStep,
     initAuth, initOnlineStatus,
   } = useAppStore();
 
@@ -792,10 +696,6 @@ export default function App() {
 
   useEffect(() => initAuth(), []);
   useEffect(() => initOnlineStatus(), []);
-  useEffect(() => {
-    const timer = setInterval(rotateTestimonial, 5000);
-    return () => clearInterval(timer);
-  }, []);
 
   // ─── Landing page (step -1) ───────────────────────────
 
@@ -844,10 +744,10 @@ export default function App() {
               </motion.div>
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.5 }} className="flex flex-wrap justify-center gap-x-12 gap-y-6 text-white/35">
                 {[
-                  { value: '2,500+', label: 'Projects deployed' },
-                  { value: '<60s', label: 'Average deploy' },
-                  { value: '99.9%', label: 'Uptime SLA' },
-                  { value: '4.9/5', label: 'Developer rating' },
+                  { value: 'Vercel', label: 'Deployment' },
+                  { value: 'Gemini AI', label: 'Code Generation' },
+                  { value: 'GitHub', label: 'Source Import' },
+                  { value: 'Firebase', label: 'Auth & Database' },
                 ].map(stat => (
                   <div key={stat.label} className="text-center">
                     <p className="text-xl font-semibold text-white/70 tracking-tight">{stat.value}</p>
@@ -856,15 +756,6 @@ export default function App() {
                 ))}
               </motion.div>
             </div>
-          </div>
-        </div>
-
-        {/* ── Logos / Trust Bar ── */}
-        <div className="bg-[#09090B] border-t border-white/[0.04] py-8">
-          <div className="max-w-5xl mx-auto flex items-center justify-center gap-10 px-8 opacity-25">
-            {['Vercel', 'Netlify', 'Railway', 'AWS', 'DigitalOcean'].map(name => (
-              <span key={name} className="text-white text-xs font-semibold uppercase tracking-[0.2em]">{name}</span>
-            ))}
           </div>
         </div>
 
@@ -879,7 +770,7 @@ export default function App() {
               {[
                 { icon: Layers, title: 'Multi-Stack Support', desc: 'React, Next.js, Vue, Svelte — import any framework. We auto-detect and configure.', gradient: 'from-blue-600 to-cyan-500' },
                 { icon: Bot, title: 'AI Stack Advisor', desc: 'Describe your project and our AI recommends the optimal tech stack, hosting, and architecture.', gradient: 'from-violet-600 to-purple-500' },
-                { icon: Globe, title: '5 Hosting Providers', desc: 'Vercel, Netlify, Railway, AWS Amplify, DigitalOcean — all with SSL, CDN, and auto-deploy.', gradient: 'from-emerald-600 to-teal-500' },
+                { icon: Globe, title: 'Vercel Deployment', desc: 'One-click deploy to Vercel with SSL, CDN, and auto-deploy from GitHub.', gradient: 'from-emerald-600 to-teal-500' },
                 { icon: Shield, title: 'Security First', desc: 'Firebase Auth, encrypted data, rate limiting, CORS protection, and OWASP-compliant API.', gradient: 'from-orange-600 to-amber-500' },
                 { icon: Palette, title: 'Design System', desc: 'Choose from Minimal, Brutalist, Editorial, or Glassmorphism. Pick colors, fonts, and more.', gradient: 'from-pink-600 to-rose-500' },
                 { icon: Terminal, title: 'Code Generation', desc: 'Gemini AI generates production-ready source code — components, routes, auth, and styling.', gradient: 'from-indigo-600 to-blue-500' },
@@ -903,46 +794,41 @@ export default function App() {
           </div>
         </section>
 
-        {/* ── Testimonials ── */}
+        {/* ── Early Access ── */}
         <section className="py-28 px-8 bg-[#09090B] text-white relative overflow-hidden">
           <div className="absolute inset-0 subtle-grid-dark" />
-          <div className="max-w-6xl mx-auto relative z-10 space-y-16">
-            <div className="text-center space-y-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-emerald-400">Testimonials</p>
-              <h2 className="text-4xl lg:text-5xl font-bold tracking-[-0.03em]">Loved by builders.</h2>
+          <div className="max-w-4xl mx-auto relative z-10 text-center space-y-10">
+            <div className="space-y-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-emerald-400">Early Access</p>
+              <h2 className="text-4xl lg:text-5xl font-bold tracking-[-0.03em]">Built in public.</h2>
+              <p className="text-lg text-white/40 max-w-xl mx-auto">ShipSaaS is live and evolving fast. Try it free, deploy your first project, and help shape what comes next.</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-              {TESTIMONIALS.map((t, i) => (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {[
+                { icon: Rocket, title: 'Deploy in minutes', desc: 'Import code, configure, and ship — powered by Vercel.' },
+                { icon: Bot, title: 'AI generates code', desc: 'Gemini AI creates production-ready source from your blueprint.' },
+                { icon: Shield, title: 'Real security', desc: 'Firebase Auth, AES-256 encryption, rate limiting, CORS.' },
+              ].map((f, i) => (
                 <motion.div
-                  key={t.name}
+                  key={f.title}
                   initial={{ opacity: 0, y: 16 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.08 }}
-                  className={cn(
-                    "p-7 rounded-2xl border space-y-5 transition-all duration-300",
-                    testimonialIdx === i ? "bg-white/[0.08] border-white/[0.15]" : "bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04]"
-                  )}
+                  className="p-7 rounded-2xl border border-white/[0.06] bg-white/[0.02] space-y-3"
                 >
-                  <Quote size={20} className="text-emerald-400/50" />
-                  <p className="text-[13px] leading-relaxed text-white/70">"{t.quote}"</p>
-                  <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${t.color} flex items-center justify-center text-white text-[10px] font-bold`}>
-                      {t.avatar}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-[13px]">{t.name}</p>
-                      <p className="text-[11px] text-white/35">{t.role}</p>
-                    </div>
-                  </div>
+                  <f.icon size={20} className="text-emerald-400" />
+                  <p className="font-semibold text-[13px]">{f.title}</p>
+                  <p className="text-[12px] text-white/50 leading-relaxed">{f.desc}</p>
                 </motion.div>
               ))}
             </div>
-            <div className="flex justify-center gap-1.5">
-              {TESTIMONIALS.map((_, i) => (
-                <button key={i} onClick={() => setTestimonialIdx(i)} className={cn("h-1.5 rounded-full transition-all duration-300", testimonialIdx === i ? "bg-emerald-400 w-6" : "bg-white/15 w-1.5")} />
-              ))}
-            </div>
+            <button
+              onClick={() => setStep(0)}
+              className="px-8 py-4 bg-white text-[#09090B] rounded-full font-semibold text-sm hover:bg-white/90 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+            >
+              Start Building — It's Free
+            </button>
           </div>
         </section>
 
@@ -993,7 +879,7 @@ export default function App() {
           </div>
           <div className="max-w-2xl mx-auto space-y-8 relative z-10">
             <h2 className="text-4xl lg:text-5xl font-bold tracking-[-0.03em]">Ready to <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">ship?</span></h2>
-            <p className="text-lg text-white/40">Join thousands of developers shipping faster with AI-powered pipelines.</p>
+            <p className="text-lg text-white/40">Deploy your first project in minutes. Completely free.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button
                 onClick={() => setStep(0)}
@@ -1314,7 +1200,20 @@ export default function App() {
                         )}
                         <div className="flex items-center justify-between pt-2 border-t border-black/5">
                           <p className="text-[10px] text-black/25">{p.timestamp}</p>
-                          {p.firestoreId && <button onClick={() => handleDeleteProject(p.firestoreId!)} className="opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity"><Trash2 size={12} className="text-red-500" /></button>}
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => {
+                                setBlueprint({ appName: p.name, projectId: p.id, style: (p as any).style || 'minimal', color: (p as any).color || '#10b981', source: (p as any).source || 'github', hosting: 'vercel', domain: (p as any).domain, authEnabled: (p as any).authEnabled ?? true, appType: 'web', plan: 'free' });
+                                setView('onboarding');
+                                handleDeploy();
+                              }}
+                              className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity flex items-center gap-1 text-[10px] font-semibold text-blue-500"
+                              title="Redeploy project"
+                            >
+                              <RotateCcw size={11} /> Redeploy
+                            </button>
+                            {p.firestoreId && <button onClick={() => handleDeleteProject(p.firestoreId!)} className="opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity"><Trash2 size={12} className="text-red-500" /></button>}
+                          </div>
                         </div>
                       </div>
                     );
@@ -1747,10 +1646,10 @@ export default function App() {
                 </div>
                 <div className="grid grid-cols-2 gap-6">
                   {[
-                    { icon: Rocket, value: '2,500+', label: 'Projects Shipped', color: 'from-emerald-500 to-teal-400' },
+                    { icon: Rocket, value: 'Vercel', label: 'Deployment Platform', color: 'from-emerald-500 to-teal-400' },
                     { icon: Clock, value: '<60s', label: 'Avg Deploy Time', color: 'from-blue-500 to-cyan-400' },
-                    { icon: Users, value: '500+', label: 'Active Developers', color: 'from-purple-500 to-pink-400' },
-                    { icon: Globe, value: '40+', label: 'Countries', color: 'from-orange-500 to-red-400' },
+                    { icon: Wand2, value: 'Gemini', label: 'AI Engine', color: 'from-purple-500 to-pink-400' },
+                    { icon: Globe, value: 'Free', label: 'To Get Started', color: 'from-orange-500 to-red-400' },
                   ].map(stat => (
                     <div key={stat.label} className="bg-[#F5F5F4] p-6 rounded-2xl text-center space-y-3">
                       <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center text-white mx-auto`}>
@@ -1838,8 +1737,8 @@ export default function App() {
                     gradient: 'from-emerald-500 to-teal-400',
                   },
                   {
-                    icon: Globe, title: 'Multi-Cloud Deployment', desc: 'Deploy to Vercel, Netlify, Railway, AWS Amplify, or DigitalOcean with one click. We handle CI/CD, environment variables, and auto-deploy from GitHub.',
-                    features: ['5 hosting providers', 'Auto SSL & CDN', 'GitHub CI/CD', 'Zero-config deploys'],
+                    icon: Globe, title: 'Vercel Deployment', desc: 'Ship to Vercel — the fastest global Edge Network — with one click. We handle CI/CD, environment variables, and auto-deploy from GitHub.',
+                    features: ['Vercel Edge Network', 'Auto SSL & CDN', 'GitHub CI/CD', 'Zero-config deploys'],
                     gradient: 'from-blue-500 to-cyan-400',
                   },
                   {
@@ -1896,14 +1795,13 @@ export default function App() {
               <div className="absolute inset-0 subtle-grid-dark" />
               <div className="max-w-2xl mx-auto space-y-8 relative z-10">
                 <h2 className="text-4xl font-bold tracking-[-0.03em]">Simple, transparent <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">pricing.</span></h2>
-                <div className="grid grid-cols-3 gap-4 max-w-lg mx-auto">
-                  {PLANS.map(plan => (
-                    <div key={plan.id} className="bg-white/5 border border-white/10 p-6 rounded-2xl text-center space-y-2">
-                      <p className="text-[11px] font-medium uppercase tracking-wider opacity-40">{plan.name}</p>
-                      <p className="text-2xl font-bold">{plan.price}</p>
-                      <p className="text-[10px] opacity-40">{plan.period}</p>
-                    </div>
-                  ))}
+                <div className="max-w-xs mx-auto">
+                  <div className="bg-white/5 border border-emerald-500/30 p-8 rounded-2xl text-center space-y-3">
+                    <p className="text-[11px] font-medium uppercase tracking-wider opacity-40">Free</p>
+                    <p className="text-4xl font-bold">$0</p>
+                    <p className="text-[10px] opacity-40">forever</p>
+                    <p className="text-xs opacity-50 leading-relaxed">Full access — AI code gen, Vercel deploy, GitHub integration, domain search.</p>
+                  </div>
                 </div>
                     <button onClick={() => { setStep(0); setView('onboarding'); }} className="px-8 py-4 bg-white text-[#09090B] rounded-full font-semibold text-sm hover:bg-white/90 transition-colors">
                   Get Started Free
@@ -1928,7 +1826,7 @@ export default function App() {
                 </div>
                 <h1 className="text-5xl lg:text-6xl font-bold tracking-[-0.03em]">From zero to <span className="bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">production.</span></h1>
                 <p className="text-lg opacity-50 max-w-xl mx-auto leading-relaxed">
-                  7 simple steps. Under 2 minutes. Here's exactly how ShipSaaS takes your idea live.
+                  4 simple steps. Under 60 seconds. Here's exactly how ShipSaaS takes your idea live.
                 </p>
               </div>
             </section>
@@ -1937,17 +1835,14 @@ export default function App() {
             <section className="py-24 px-8 bg-white">
               <div className="max-w-4xl mx-auto space-y-0">
                 {[
-                  { step: 1, title: 'Create Your Account', desc: 'Sign up with email, Google, or GitHub in seconds. No credit card required for the free tier.', icon: Lock, tip: 'You can also sign in with an existing GitHub account to auto-connect repos.' },
+                  { step: 1, title: 'Create Your Account', desc: 'Sign up with email, Google, or GitHub in seconds. No credit card required.', icon: Lock, tip: 'You can also sign in with an existing GitHub account to auto-connect repos.' },
                   { step: 2, title: 'Choose Your Source', desc: 'Import from GitHub, upload a ZIP, use a template — or describe your project and let AI Auto-Setup handle everything.', icon: Code, tip: 'AI Auto-Setup analyzes your description and fills every field automatically. You can edit any choice before deploying.' },
-                  { step: 3, title: 'Secure Your Domain', desc: 'Search for available domains or use a free .shipsaas.io subdomain. SSL is auto-provisioned via Cloudflare.', icon: Globe, tip: 'You can add a custom domain later. Every project gets a free subdomain immediately.' },
-                  { step: 4, title: 'Pick Your Hosting', desc: 'Choose from Vercel, Netlify, Railway, AWS Amplify, or DigitalOcean. All include SSL, CDN, and auto-deploy.', icon: Cpu, tip: 'Not sure which to pick? Ask the AI Stack Advisor for a personalized recommendation.' },
-                  { step: 5, title: 'Configure Your App', desc: 'Name your project, pick an aesthetic style (Minimal, Brutalist, Editorial, Glassmorphism), choose colors, and set your platform.', icon: Sparkles, tip: 'The live preview card shows exactly how your configuration looks in real-time.' },
-                  { step: 6, title: 'Select Your Plan', desc: 'Start free with the Starter plan, or unlock more features with Pro ($29/mo) or Agency ($99/mo).', icon: CreditCard, tip: 'You can upgrade or downgrade anytime from your Profile page.' },
-                  { step: 7, title: 'Ship It!', desc: 'One click and ShipSaaS creates your repo, generates code, provisions infrastructure, configures DNS, and deploys your app to production.', icon: Rocket, tip: 'The deploy terminal shows real-time progress. Your app is typically live in under 60 seconds.' },
+                  { step: 3, title: 'Configure Your Project', desc: 'Name your app, pick a style, set a domain (optional), toggle auth — all in one step. Includes a live preview card.', icon: Sparkles, tip: 'For AI Auto-Setup, this step shows a full editable blueprint. You can tweak any AI choice before shipping.' },
+                  { step: 4, title: 'Ship It!', desc: 'One click and ShipSaaS generates your code, provisions Vercel infrastructure, configures DNS, and deploys to production.', icon: Rocket, tip: 'The deploy terminal shows real-time progress. Your app is typically live in under 60 seconds.' },
                 ].map((s, i) => (
                   <div key={s.step} className="relative">
                     {/* Connecting line */}
-                    {i < 6 && (
+                    {i < 3 && (
                       <div className="absolute left-[27px] top-[72px] bottom-0 w-px bg-gradient-to-b from-emerald-500/30 to-transparent" />
                     )}
                     <motion.div
@@ -1986,7 +1881,7 @@ export default function App() {
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 text-purple-600 text-[11px] font-medium">
                   <Wand2 size={12} /> The Fast Track
                 </div>
-                <h2 className="text-4xl font-bold tracking-[-0.03em]">Or skip all 7 steps <span className="text-black/25">with AI.</span></h2>
+                <h2 className="text-4xl font-bold tracking-[-0.03em]">Or let AI <span className="text-black/25">do it all.</span></h2>
                 <p className="opacity-50 max-w-lg mx-auto leading-relaxed">
                   Just describe your project in plain English. Our AI analyzes your requirements, auto-configures every setting, and presents an editable blueprint. Review, tweak, and hit "Ship It" — done.
                 </p>
@@ -1999,7 +1894,7 @@ export default function App() {
                     "A project management SaaS with team collaboration, Kanban boards, real-time chat, and Stripe billing"
                   </div>
                   <div className="flex items-center gap-2 text-emerald-600 text-xs font-bold">
-                    <ArrowRight size={14} /> AI configures: hosting, domain, style, auth, plan — in 3 seconds
+                    <ArrowRight size={14} /> AI configures: domain, style, auth — deploys to Vercel in seconds
                   </div>
                 </div>
                 <button onClick={() => { setStep(0); setView('onboarding'); }} className="px-8 py-4 bg-[#09090B] text-white rounded-full font-semibold text-sm hover:bg-[#09090B]/90 transition-colors">
@@ -2020,12 +1915,8 @@ export default function App() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {[
-                    { provider: 'Vercel', purpose: 'Deploy React/Next.js apps, manage projects', required: 'If using Vercel hosting' },
-                    { provider: 'Netlify', purpose: 'Deploy static sites, manage forms & identity', required: 'If using Netlify hosting' },
-                    { provider: 'Railway', purpose: 'Deploy full-stack apps and databases', required: 'If using Railway hosting' },
-                    { provider: 'AWS', purpose: 'Amplify hosting and cloud services', required: 'If using AWS Amplify' },
-                    { provider: 'DigitalOcean', purpose: 'App platform, droplets, managed databases', required: 'If using DigitalOcean' },
-                    { provider: 'GitHub', purpose: 'Create repos, push code, set up CI/CD webhooks', required: 'For all deploy methods' },
+                    { provider: 'Vercel', purpose: 'Deploy React/Next.js & Vite apps — auto SSL, Edge CDN, instant rollbacks', required: 'Required for deployment' },
+                    { provider: 'GitHub', purpose: 'Create repos, push generated code, set up CI/CD webhooks', required: 'Required for all deploy methods' },
                     { provider: 'Stripe', purpose: 'Process payments for your end users', required: 'If your app has billing' },
                     { provider: 'Cloudflare', purpose: 'DNS management and SSL certificate provisioning', required: 'For custom domains' },
                   ].map(api => (
@@ -2072,7 +1963,7 @@ export default function App() {
               return (
               <StepShell
                 key="auth"
-                phase="Step 01 of 07"
+                phase="Step 01 of 04"
                 title={forgotPasswordMode
                   ? <><span className="opacity-30">Reset your</span><br />Password.</>
                   : authMode === 'signup'
@@ -2361,12 +2252,12 @@ export default function App() {
             {step === 1 && (
               <StepShell
                 key="source"
-                phase="Step 02 of 07"
+                phase="Step 02 of 04"
                 title={<>What are you<br /><span className="opacity-30">Building?</span></>}
                 subtitle="Describe your project and we'll auto-configure everything — or set it up manually."
                 onNext={next}
                 onBack={back}
-                nextLabel="Configure Manually →"
+                nextLabel="Configure →"
                 nextDisabled={
                   (blueprint.source === 'github' && !githubUrl) ||
                   (blueprint.source === 'zip' && !uploadedFile)
@@ -2491,304 +2382,21 @@ export default function App() {
               </StepShell>
             )}
 
-            {/* Step 2: Domain */}
+            {/* Step 2: Configure (name, style, domain merged) */}
             {step === 2 && (
               <StepShell
-                key="domain"
-                phase="Step 03 of 07"
-                title={<>Secure your<br /><span className="opacity-30">Domain.</span></>}
-                subtitle="Search for your perfect domain name. Skip if you want a free subdomain."
-                onNext={next}
-                onBack={back}
-                nextLabel={blueprint.domain ? 'Continue' : 'Skip — Use Subdomain'}
-              >
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div className="bg-white border border-[#09090B] p-8 rounded-2xl brutal-shadow space-y-6">
-                    <h3 className="font-semibold text-lg">Search Domains</h3>
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30" />
-                        <input
-                          type="text"
-                          placeholder="my-awesome-app"
-                          value={domainSearch}
-                          onChange={e => setDomainSearch(e.target.value)}
-                          onKeyDown={e => e.key === 'Enter' && handleSearchDomains(domainSearch || blueprint.projectId || '')}
-                          className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 pl-11 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25"
-                        />
-                      </div>
-                      <button
-                        onClick={() => handleSearchDomains(domainSearch || blueprint.projectId || '')}
-                        disabled={domainSearchLoading}
-                        className="px-5 py-3 bg-[#09090B] text-white rounded-[10px] text-xs font-semibold hover:bg-[#09090B]/80 transition-colors disabled:opacity-50 flex items-center gap-1.5 shrink-0"
-                      >
-                        {domainSearchLoading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
-                        {domainSearchLoading ? 'Checking...' : 'Check'}
-                      </button>
-                    </div>
-                    <div className="space-y-2">
-                      {domainResults.length > 0 ? (
-                        <>
-                          <p className="text-[10px] uppercase tracking-wider font-semibold text-black/30">Availability Results (via DNS lookup)</p>
-                          {domainResults.map(d => (
-                            <div
-                              key={d.domain}
-                              className={cn(
-                                "flex justify-between items-center p-4 rounded-xl transition-colors",
-                                d.available ? "cursor-pointer hover:bg-emerald-500/5" : "opacity-40 cursor-not-allowed",
-                                blueprint.domain === d.domain && "bg-emerald-500/10 border border-emerald-500"
-                              )}
-                              onClick={() => d.available && setBlueprint({ ...blueprint, domain: d.domain })}
-                            >
-                              <div className="flex items-center gap-3">
-                                {blueprint.domain === d.domain
-                                  ? <CheckCircle2 size={14} className="text-emerald-500" />
-                                  : <Globe size={14} className="opacity-30" />
-                                }
-                                <p className="font-bold font-mono">{d.domain}</p>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <span className={cn("text-[9px] font-bold uppercase px-2 py-0.5 rounded-full", d.available ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-500")}>
-                                  {d.available ? 'Likely Available' : 'Taken'}
-                                </span>
-                                {d.available && (
-                                  <a href={`https://www.namecheap.com/domains/registration/results/?domain=${encodeURIComponent(d.domain)}`} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-[9px] font-bold text-blue-500 hover:underline">Register &rarr;</a>
-                                )}
-                                <p className="text-[10px] font-mono opacity-50">{d.price}</p>
-                              </div>
-                            </div>
-                          ))}
-                          <p className="text-[10px] text-black/25 pt-1">Availability is estimated via DNS lookup and may not be 100% accurate. To register, visit <a href="https://www.namecheap.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-black/40">Namecheap</a>, <a href="https://www.cloudflare.com/products/registrar/" target="_blank" rel="noopener noreferrer" className="underline hover:text-black/40">Cloudflare</a>, or <a href="https://domains.google.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-black/40">Google Domains</a>.</p>
-                        </>
-                      ) : domainSearchLoading ? (
-                        <div className="flex items-center justify-center py-8 gap-2 text-black/30">
-                          <Loader2 size={16} className="animate-spin" />
-                          <p className="text-sm">Checking domain availability...</p>
-                        </div>
-                      ) : (
-                        <div className="text-center py-8 text-black/20">
-                          <Globe size={32} className="mx-auto mb-3 opacity-30" />
-                          <p className="text-sm font-medium">Enter a name and click Check</p>
-                          <p className="text-[11px] mt-1 opacity-60">We'll check availability across .com, .io, .ai, .app, and .dev</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div className="bg-white border border-black/10 p-8 rounded-2xl space-y-4">
-                      <h4 className="font-bold text-sm uppercase tracking-widest opacity-60">Free Subdomain</h4>
-                      <div className="bg-[#F5F5F4] rounded-xl p-4 font-mono text-sm">
-                        {blueprint.projectId || 'your-app'}<span className="opacity-40">.shipsaas.io</span>
-                      </div>
-                      <p className="text-xs opacity-40">Always included. You can add a custom domain later.</p>
-                    </div>
-
-                    {blueprint.domain && (
-                      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-emerald-500/5 border border-emerald-500/20 p-6 rounded-2xl space-y-2">
-                        <p className="text-[10px] font-mono uppercase text-emerald-600 font-bold">Selected Domain</p>
-                        <p className="text-xl font-bold font-mono">{blueprint.domain}</p>
-                        <p className="text-xs opacity-50">SSL will be auto-provisioned via Cloudflare.</p>
-                      </motion.div>
-                    )}
-                  </div>
-                </div>
-              </StepShell>
-            )}
-
-            {/* Step 3: Hosting */}
-            {step === 3 && (
-              <StepShell
-                key="hosting"
-                phase="Step 04 of 07"
-                title={<>Choose your<br /><span className="opacity-30">Hosting.</span></>}
-                subtitle="Where should your project live? All options include SSL and CDN."
-                onNext={next}
-                onBack={back}
-                nextDisabled={!blueprint.hosting}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {HOSTING_PROVIDERS.map(p => {
-                    const isSupported = p.id === 'vercel';
-                    return (
-                    <div
-                      key={p.id}
-                      onClick={() => isSupported && setBlueprint({ ...blueprint, hosting: p.id })}
-                      className={cn(
-                        "p-8 rounded-2xl border transition-all relative group",
-                        !isSupported && "opacity-50 cursor-not-allowed",
-                        isSupported && "cursor-pointer",
-                        blueprint.hosting === p.id
-                          ? "bg-[#09090B] text-white border-[#09090B] brutal-shadow"
-                          : isSupported ? "bg-white border-black/10 hover:border-black" : "bg-white border-black/10"
-                      )}
-                    >
-                      {p.popular && isSupported && (
-                        <span className="absolute top-4 right-4 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[8px] font-bold uppercase">Popular</span>
-                      )}
-                      {!isSupported && (
-                        <span className="absolute top-4 right-4 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 text-[8px] font-bold uppercase">Coming Soon</span>
-                      )}
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                          <Globe size={20} />
-                          <p className="font-bold text-lg">{p.name}</p>
-                        </div>
-                        <p className="text-xs opacity-60 leading-relaxed">{p.description}</p>
-                        <div className="flex items-center justify-between pt-2">
-                          <p className="font-mono font-bold">{p.price}</p>
-                          <div className="flex items-center gap-1">
-                            <Star size={10} className={blueprint.hosting === p.id ? "text-yellow-400" : "text-yellow-500"} />
-                            <span className="text-xs font-bold">{p.rating}</span>
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap gap-2 pt-2">
-                          {p.features.map(f => (
-                            <span key={f} className={cn(
-                              "text-[9px] font-mono uppercase px-2 py-1 rounded-lg",
-                              blueprint.hosting === p.id ? "bg-white/10" : "bg-black/5"
-                            )}>{f}</span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    );
-                  })}
-                </div>
-              </StepShell>
-            )}
-
-            {/* Step 4: Configure */}
-            {step === 4 && (
-              <StepShell
                 key="configure"
-                phase="Step 05 of 07"
-                title={<>Design your<br /><span className="opacity-30">Experience.</span></>}
-                subtitle="Name your project, pick a style, color, and platform."
-                onNext={next}
-                onBack={back}
-                nextDisabled={!blueprint.appName}
-              >
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                  <div className="bg-white border border-[#09090B] p-10 rounded-2xl brutal-shadow space-y-8">
-                    {/* App Identity */}
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-mono uppercase opacity-40 tracking-widest">Project Identity</label>
-                      <div className="grid grid-cols-2 gap-4">
-                        <input
-                          type="text"
-                          placeholder="App Name"
-                          value={blueprint.appName}
-                          onChange={e => setBlueprint({ ...blueprint, appName: e.target.value })}
-                          className="bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25"
-                        />
-                        <input
-                          type="text"
-                          placeholder="project-id"
-                          value={blueprint.projectId}
-                          onChange={e => setBlueprint({ ...blueprint, projectId: e.target.value })}
-                          className="bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Style */}
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-mono uppercase opacity-40 tracking-widest">Aesthetic Style</label>
-                      <div className="grid grid-cols-2 gap-3">
-                        {(['minimal', 'brutalist', 'editorial', 'glassmorphism'] as const).map(s => (
-                          <button
-                            key={s}
-                            onClick={() => setBlueprint({ ...blueprint, style: s })}
-                            className={cn(
-                              "p-3 rounded-xl border text-xs font-semibold transition-all",
-                              blueprint.style === s ? "bg-[#09090B] text-white border-[#09090B]" : "border-black/10 hover:border-black"
-                            )}
-                          >{s}</button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Color */}
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-mono uppercase opacity-40 tracking-widest">Accent Color</label>
-                      <div className="flex gap-3">
-                        {['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#ec4899'].map(c => (
-                          <button
-                            key={c}
-                            onClick={() => setBlueprint({ ...blueprint, color: c })}
-                            className={cn("w-10 h-10 rounded-full border-2 transition-all", blueprint.color === c ? "border-black scale-110" : "border-transparent")}
-                            style={{ backgroundColor: c }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Platform */}
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-mono uppercase opacity-40 tracking-widest">Target Platform</label>
-                      <div className="grid grid-cols-2 gap-4">
-                        {[{ id: 'web' as const, icon: Globe, label: 'Web App' }, { id: 'mobile' as const, icon: Smartphone, label: 'Mobile App' }].map(t => (
-                          <button
-                            key={t.id}
-                            onClick={() => setBlueprint({ ...blueprint, appType: t.id })}
-                            className={cn(
-                              "p-5 rounded-xl border flex flex-col items-center gap-2 transition-all",
-                              blueprint.appType === t.id ? "bg-[#09090B] text-white border-[#09090B]" : "border-black/10 hover:border-black"
-                            )}
-                          >
-                            <t.icon size={22} />
-                            <span className="text-[10px] font-semibold">{t.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Preview card */}
-                  <div className="bg-[#09090B] text-white p-10 rounded-2xl brutal-shadow flex flex-col justify-between">
-                    <div>
-                      <p className="text-[10px] font-mono uppercase opacity-40 tracking-widest mb-4">Live Preview</p>
-                      <h3 className="text-4xl font-bold tracking-[-0.03em] mb-2">{blueprint.appName || 'Your App'}</h3>
-                      <p className="text-sm opacity-50">{blueprint.projectId || 'project-id'}.{blueprint.domain ? blueprint.domain.split('.').slice(-1) : 'vercel.app'}</p>
-                    </div>
-                    <div className="space-y-4 mt-12">
-                      {[
-                        ['Style', blueprint.style],
-                        ['Platform', blueprint.appType],
-                        ['Hosting', blueprint.hosting || '—'],
-                        ['Source', blueprint.source],
-                      ].map(([k, v]) => (
-                        <div key={k} className="flex justify-between items-center border-b border-white/10 pb-2">
-                          <p className="text-[10px] font-mono uppercase opacity-40">{k}</p>
-                          <p className="text-sm font-bold uppercase tracking-tighter">{v}</p>
-                        </div>
-                      ))}
-                      <div className="flex justify-between items-center border-b border-white/10 pb-2">
-                        <p className="text-[10px] font-mono uppercase opacity-40">Accent</p>
-                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: blueprint.color }} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </StepShell>
-            )}
-
-            {/* Step 5: Review & Plan */}
-            {step === 5 && (
-              <StepShell
-                key="review"
-                phase={autoMode ? 'AI Auto-Configured' : 'Step 06 of 07'}
-                title={autoMode ? <>Review your<br /><span className="opacity-30">Blueprint.</span></> : <>Choose your<br /><span className="opacity-30">Plan.</span></>}
-                subtitle={autoMode ? 'AI configured everything below. Click any section to edit, then ship.' : 'Start free, upgrade when you\'re ready. No credit card required for Starter.'}
+                phase={autoMode ? 'AI Auto-Configured' : 'Step 03 of 04'}
+                title={autoMode ? <>Review your<br /><span className="opacity-30">Blueprint.</span></> : <>Configure your<br /><span className="opacity-30">Project.</span></>}
+                subtitle={autoMode ? 'AI configured everything below. Click any section to edit, then ship.' : 'Name, style, and optionally pick a domain — then ship.'}
                 onNext={() => handleDeploy()}
                 onBack={() => { if (autoMode) { setAutoMode(false); setStep(1); } else { back(); } }}
                 nextLabel="Ship It 🚀"
+                nextDisabled={!blueprint.appName}
               >
                 {autoMode ? (
-                  /* ── Full Blueprint Review ── */
+                  /* ── AI Auto-Configured Blueprint Review ── */
                   <div className="space-y-6">
-                    {/* AI badge */}
                     <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-purple-500/5 to-blue-500/5 border border-purple-200 rounded-2xl">
                       <Wand2 size={16} className="text-purple-500" />
                       <p className="text-sm"><span className="font-bold">AI Auto-Setup</span> — <span className="opacity-50">based on: "{projectDescription}"</span></p>
@@ -2798,36 +2406,14 @@ export default function App() {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {/* ─ Project Identity ─ */}
-                      <ReviewCard
-                        label="Project Identity"
-                        icon={Rocket}
-                        gradient="from-blue-500 to-cyan-400"
-                        editing={reviewEditing === 'identity'}
-                        onToggle={() => setReviewEditing(reviewEditing === 'identity' ? null : 'identity')}
-                        summary={<><span className="font-bold">{blueprint.appName || '—'}</span> <span className="opacity-40">({blueprint.projectId || '—'})</span></>}
-                      >
+                      <ReviewCard label="Project Identity" icon={Rocket} gradient="from-blue-500 to-cyan-400" editing={reviewEditing === 'identity'} onToggle={() => setReviewEditing(reviewEditing === 'identity' ? null : 'identity')} summary={<><span className="font-bold">{blueprint.appName || '—'}</span> <span className="opacity-40">({blueprint.projectId || '—'})</span></>}>
                         <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-mono uppercase opacity-40 tracking-widest">App Name</label>
-                            <input type="text" value={blueprint.appName} onChange={e => setBlueprint({ ...blueprint, appName: e.target.value })} className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200" />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-mono uppercase opacity-40 tracking-widest">Project ID</label>
-                            <input type="text" value={blueprint.projectId} onChange={e => setBlueprint({ ...blueprint, projectId: e.target.value })} className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200" />
-                          </div>
+                          <div className="space-y-2"><label className="text-[10px] font-mono uppercase opacity-40 tracking-widest">App Name</label><input type="text" value={blueprint.appName} onChange={e => setBlueprint({ ...blueprint, appName: e.target.value })} className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200" /></div>
+                          <div className="space-y-2"><label className="text-[10px] font-mono uppercase opacity-40 tracking-widest">Project ID</label><input type="text" value={blueprint.projectId} onChange={e => setBlueprint({ ...blueprint, projectId: e.target.value })} className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200" /></div>
                         </div>
                       </ReviewCard>
 
-                      {/* ─ Source ─ */}
-                      <ReviewCard
-                        label="Code Source"
-                        icon={Code}
-                        gradient="from-emerald-500 to-teal-400"
-                        editing={reviewEditing === 'source'}
-                        onToggle={() => setReviewEditing(reviewEditing === 'source' ? null : 'source')}
-                        summary={<span className="font-bold capitalize">{blueprint.source}</span>}
-                      >
+                      <ReviewCard label="Code Source" icon={Code} gradient="from-emerald-500 to-teal-400" editing={reviewEditing === 'source'} onToggle={() => setReviewEditing(reviewEditing === 'source' ? null : 'source')} summary={<span className="font-bold capitalize">{blueprint.source}</span>}>
                         <div className="flex gap-3">
                           {(['template', 'github', 'zip'] as const).map(s => (
                             <button key={s} onClick={() => setBlueprint({ ...blueprint, source: s })} className={cn("flex-1 py-3 rounded-xl text-xs font-semibold transition-all", blueprint.source === s ? "bg-[#09090B] text-white" : "bg-[#F5F5F4] hover:bg-black/10")}>{s}</button>
@@ -2835,116 +2421,32 @@ export default function App() {
                         </div>
                       </ReviewCard>
 
-                      {/* ─ Hosting ─ */}
-                      <ReviewCard
-                        label="Hosting"
-                        icon={Globe}
-                        gradient="from-orange-500 to-red-400"
-                        editing={reviewEditing === 'hosting'}
-                        onToggle={() => setReviewEditing(reviewEditing === 'hosting' ? null : 'hosting')}
-                        summary={<span className="font-bold capitalize">{blueprint.hosting || 'Vercel'}</span>}
-                        reason={aiReasoning?.hosting}
-                      >
-                        <div className="grid grid-cols-2 gap-2">
-                          {HOSTING_PROVIDERS.map(p => (
-                            <button key={p.id} onClick={() => setBlueprint({ ...blueprint, hosting: p.id })} className={cn("p-3 rounded-xl text-left text-xs transition-all", blueprint.hosting === p.id ? "bg-[#09090B] text-white" : "bg-[#F5F5F4] hover:bg-black/10")}>
-                              <span className="font-bold">{p.name}</span> <span className="opacity-40">{p.price}</span>
-                            </button>
-                          ))}
-                        </div>
+                      <ReviewCard label="Deployment" icon={Globe} gradient="from-orange-500 to-red-400" editing={false} onToggle={() => {}} summary={<span className="font-bold">Vercel</span>}>
+                        <div className="bg-[#F5F5F4] p-3 rounded-xl text-xs text-black/50">Deployed to Vercel — Edge Network, auto SSL, CDN.</div>
                       </ReviewCard>
 
-                      {/* ─ Domain ─ */}
-                      <ReviewCard
-                        label="Domain"
-                        icon={Globe}
-                        gradient="from-indigo-500 to-blue-400"
-                        editing={reviewEditing === 'domain'}
-                        onToggle={() => setReviewEditing(reviewEditing === 'domain' ? null : 'domain')}
-                        summary={<span className="font-bold font-mono">{blueprint.domain || `${blueprint.projectId || 'app'}.shipsaas.io`}</span>}
-                      >
+                      <ReviewCard label="Domain" icon={Globe} gradient="from-indigo-500 to-blue-400" editing={reviewEditing === 'domain'} onToggle={() => setReviewEditing(reviewEditing === 'domain' ? null : 'domain')} summary={<span className="font-bold font-mono">{blueprint.domain || `${blueprint.projectId || 'app'}.shipsaas.io`}</span>}>
                         <div className="space-y-3">
                           <input type="text" value={blueprint.domain || ''} onChange={e => setBlueprint({ ...blueprint, domain: e.target.value || undefined })} placeholder="custom-domain.com" className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25" />
                           <p className="text-[10px] opacity-40">Leave empty for free subdomain: {blueprint.projectId || 'app'}.shipsaas.io</p>
                         </div>
                       </ReviewCard>
 
-                      {/* ─ Style & Design ─ */}
-                      <ReviewCard
-                        label="Design"
-                        icon={Palette}
-                        gradient="from-pink-500 to-rose-400"
-                        editing={reviewEditing === 'design'}
-                        onToggle={() => setReviewEditing(reviewEditing === 'design' ? null : 'design')}
-                        summary={<><span className="font-bold capitalize">{blueprint.style}</span> <span className="inline-block w-3 h-3 rounded-full align-middle ml-2" style={{ backgroundColor: blueprint.color }} /></>}
-                        reason={aiReasoning?.style}
-                      >
+                      <ReviewCard label="Design" icon={Palette} gradient="from-pink-500 to-rose-400" editing={reviewEditing === 'design'} onToggle={() => setReviewEditing(reviewEditing === 'design' ? null : 'design')} summary={<><span className="font-bold capitalize">{blueprint.style}</span> <span className="inline-block w-3 h-3 rounded-full align-middle ml-2" style={{ backgroundColor: blueprint.color }} /></>} reason={aiReasoning?.style}>
                         <div className="space-y-4">
-                          <div className="grid grid-cols-4 gap-2">
-                            {(['minimal', 'brutalist', 'editorial', 'glassmorphism'] as const).map(s => (
-                              <button key={s} onClick={() => setBlueprint({ ...blueprint, style: s })} className={cn("py-2 rounded-xl text-[10px] font-semibold transition-all", blueprint.style === s ? "bg-[#09090B] text-white" : "bg-[#F5F5F4] hover:bg-black/10")}>{s}</button>
-                            ))}
-                          </div>
-                          <div className="flex gap-2">
-                            {['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#ec4899'].map(c => (
-                              <button key={c} onClick={() => setBlueprint({ ...blueprint, color: c })} className={cn("w-8 h-8 rounded-full border-2 transition-all", blueprint.color === c ? "border-black scale-110" : "border-transparent")} style={{ backgroundColor: c }} />
-                            ))}
-                          </div>
+                          <div className="grid grid-cols-4 gap-2">{(['minimal', 'brutalist', 'editorial', 'glassmorphism'] as const).map(s => (<button key={s} onClick={() => setBlueprint({ ...blueprint, style: s })} className={cn("py-2 rounded-xl text-[10px] font-semibold transition-all", blueprint.style === s ? "bg-[#09090B] text-white" : "bg-[#F5F5F4] hover:bg-black/10")}>{s}</button>))}</div>
+                          <div className="flex gap-2">{['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#ec4899'].map(c => (<button key={c} onClick={() => setBlueprint({ ...blueprint, color: c })} className={cn("w-8 h-8 rounded-full border-2 transition-all", blueprint.color === c ? "border-black scale-110" : "border-transparent")} style={{ backgroundColor: c }} />))}</div>
                         </div>
                       </ReviewCard>
 
-                      {/* ─ Platform ─ */}
-                      <ReviewCard
-                        label="Platform"
-                        icon={Smartphone}
-                        gradient="from-purple-500 to-pink-400"
-                        editing={reviewEditing === 'platform'}
-                        onToggle={() => setReviewEditing(reviewEditing === 'platform' ? null : 'platform')}
-                        summary={<span className="font-bold capitalize">{blueprint.appType} App</span>}
-                      >
-                        <div className="flex gap-3">
-                          {([{ id: 'web' as const, label: 'Web App' }, { id: 'mobile' as const, label: 'Mobile App' }]).map(t => (
-                            <button key={t.id} onClick={() => setBlueprint({ ...blueprint, appType: t.id })} className={cn("flex-1 py-3 rounded-xl text-xs font-semibold transition-all", blueprint.appType === t.id ? "bg-[#09090B] text-white" : "bg-[#F5F5F4] hover:bg-black/10")}>{t.label}</button>
-                          ))}
-                        </div>
-                      </ReviewCard>
-
-                      {/* ─ Auth ─ */}
-                      <ReviewCard
-                        label="Authentication"
-                        icon={Shield}
-                        gradient="from-amber-500 to-orange-400"
-                        editing={reviewEditing === 'auth'}
-                        onToggle={() => setReviewEditing(reviewEditing === 'auth' ? null : 'auth')}
-                        summary={<span className="font-bold">{blueprint.authEnabled ? 'Enabled — Firebase Auth' : 'Disabled'}</span>}
-                      >
+                      <ReviewCard label="Authentication" icon={Shield} gradient="from-amber-500 to-orange-400" editing={reviewEditing === 'auth'} onToggle={() => setReviewEditing(reviewEditing === 'auth' ? null : 'auth')} summary={<span className="font-bold">{blueprint.authEnabled ? 'Enabled — Firebase Auth' : 'Disabled'}</span>}>
                         <div className="flex gap-3">
                           <button onClick={() => setBlueprint({ ...blueprint, authEnabled: true })} className={cn("flex-1 py-3 rounded-xl text-xs font-semibold transition-all", blueprint.authEnabled ? "bg-[#09090B] text-white" : "bg-[#F5F5F4] hover:bg-black/10")}>Enabled</button>
                           <button onClick={() => setBlueprint({ ...blueprint, authEnabled: false })} className={cn("flex-1 py-3 rounded-xl text-xs font-semibold transition-all", !blueprint.authEnabled ? "bg-[#09090B] text-white" : "bg-[#F5F5F4] hover:bg-black/10")}>Disabled</button>
                         </div>
                       </ReviewCard>
-
-                      {/* ─ Plan ─ */}
-                      <ReviewCard
-                        label="Plan"
-                        icon={CreditCard}
-                        gradient="from-emerald-500 to-teal-400"
-                        editing={reviewEditing === 'plan'}
-                        onToggle={() => setReviewEditing(reviewEditing === 'plan' ? null : 'plan')}
-                        summary={<><span className="font-bold capitalize">{blueprint.plan}</span> <span className="opacity-40">— {PLANS.find(p => p.id === blueprint.plan)?.price}{PLANS.find(p => p.id === blueprint.plan)?.period}</span></>}
-                      >
-                        <div className="grid grid-cols-3 gap-2">
-                          {PLANS.map(p => (
-                            <button key={p.id} onClick={() => setBlueprint({ ...blueprint, plan: p.id })} className={cn("p-3 rounded-xl text-left transition-all", blueprint.plan === p.id ? "bg-[#09090B] text-white" : "bg-[#F5F5F4] hover:bg-black/10")}>
-                              <p className="font-bold text-sm">{p.name}</p>
-                              <p className={cn("text-[10px] mt-0.5", blueprint.plan === p.id ? "opacity-60" : "opacity-40")}>{p.price}{p.period}</p>
-                            </button>
-                          ))}
-                        </div>
-                      </ReviewCard>
                     </div>
 
-                    {/* AI reasoning */}
                     {aiReasoning?.stack && (
                       <div className="bg-purple-500/5 border border-purple-500/10 p-5 rounded-2xl flex items-start gap-3">
                         <Bot size={16} className="text-purple-500 shrink-0 mt-0.5" />
@@ -2956,69 +2458,114 @@ export default function App() {
                     )}
                   </div>
                 ) : (
-                  /* ── Manual Plan Selection ── */
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {PLANS.map(plan => (
-                      <div
-                        key={plan.id}
-                        onClick={() => plan.available && setBlueprint({ ...blueprint, plan: plan.id })}
-                        className={cn(
-                          "p-8 rounded-2xl border transition-all relative",
-                          !plan.available && "opacity-50 cursor-not-allowed",
-                          plan.available && "cursor-pointer",
-                          blueprint.plan === plan.id
-                            ? "bg-[#09090B] text-white border-[#09090B] brutal-shadow"
-                            : plan.available ? "bg-white border-black/10 hover:border-black" : "bg-white border-black/10",
-                          plan.highlighted && blueprint.plan !== plan.id && "border-emerald-500"
-                        )}
-                      >
-                        {plan.highlighted && plan.available && (
-                          <span className={cn(
-                            "absolute -top-3 left-6 px-3 py-1 rounded-full text-[9px] font-bold uppercase",
-                            blueprint.plan === plan.id ? "bg-emerald-500 text-white" : "bg-emerald-500/10 text-emerald-600"
-                          )}>Current Plan</span>
-                        )}
-                        {!plan.available && (
-                          <span className="absolute -top-3 left-6 px-3 py-1 rounded-full bg-amber-500/20 text-amber-600 text-[9px] font-bold uppercase">Coming Soon</span>
-                        )}
-                        <div className="space-y-6">
-                          <div>
-                            <p className="text-[10px] font-mono uppercase opacity-50 tracking-widest">{plan.name}</p>
-                            <div className="flex items-baseline gap-1 mt-2">
-                              <span className="text-4xl font-bold tracking-tighter">{plan.price}</span>
-                              <span className="text-xs opacity-40">{plan.period}</span>
-                            </div>
-                            <p className="text-xs opacity-50 mt-2">{plan.description}</p>
+                  /* ── Manual Configure ── */
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                    <div className="space-y-8">
+                      <div className="bg-white border border-[#09090B] p-8 rounded-2xl brutal-shadow space-y-6">
+                        <h3 className="font-semibold text-lg">Project Identity</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-mono uppercase opacity-40 tracking-widest">App Name</label>
+                            <input type="text" placeholder="My App" value={blueprint.appName} onChange={e => setBlueprint({ ...blueprint, appName: e.target.value })} className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25" />
                           </div>
-                          <div className="space-y-3">
-                            {plan.features.map(f => (
-                              <div key={f} className="flex items-center gap-2">
-                                <Check size={12} className={blueprint.plan === plan.id ? "text-emerald-400" : "text-emerald-500"} />
-                                <span className="text-xs">{f}</span>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-mono uppercase opacity-40 tracking-widest">Project ID</label>
+                            <input type="text" placeholder="my-app" value={blueprint.projectId} onChange={e => setBlueprint({ ...blueprint, projectId: e.target.value })} className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25" />
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <label className="text-[10px] font-mono uppercase opacity-40 tracking-widest">Aesthetic Style</label>
+                          <div className="grid grid-cols-2 gap-3">
+                            {(['minimal', 'brutalist', 'editorial', 'glassmorphism'] as const).map(s => (
+                              <button key={s} onClick={() => setBlueprint({ ...blueprint, style: s })} className={cn("p-3 rounded-xl border text-xs font-semibold transition-all capitalize", blueprint.style === s ? "bg-[#09090B] text-white border-[#09090B]" : "border-black/10 hover:border-black")}>{s}</button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <label className="text-[10px] font-mono uppercase opacity-40 tracking-widest">Accent Color</label>
+                          <div className="flex gap-3">
+                            {['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#ec4899'].map(c => (
+                              <button key={c} onClick={() => setBlueprint({ ...blueprint, color: c })} className={cn("w-10 h-10 rounded-full border-2 transition-all", blueprint.color === c ? "border-black scale-110" : "border-transparent")} style={{ backgroundColor: c }} />
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <label className="text-[10px] font-mono uppercase opacity-40 tracking-widest">Authentication</label>
+                          <div className="flex gap-3">
+                            <button onClick={() => setBlueprint({ ...blueprint, authEnabled: true })} className={cn("flex-1 py-3 rounded-xl border text-xs font-semibold transition-all", blueprint.authEnabled ? "bg-[#09090B] text-white border-[#09090B]" : "border-black/10 hover:border-black")}>Enabled (Firebase Auth)</button>
+                            <button onClick={() => setBlueprint({ ...blueprint, authEnabled: false })} className={cn("flex-1 py-3 rounded-xl border text-xs font-semibold transition-all", !blueprint.authEnabled ? "bg-[#09090B] text-white border-[#09090B]" : "border-black/10 hover:border-black")}>Disabled</button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Domain search (optional) */}
+                      <div className="bg-white border border-black/10 p-6 rounded-2xl space-y-4">
+                        <h3 className="font-semibold text-sm flex items-center gap-2"><Globe size={14} /> Domain <span className="text-[10px] font-normal text-black/35">(optional)</span></h3>
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-30" />
+                            <input type="text" placeholder="my-app" value={domainSearch} onChange={e => setDomainSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearchDomains(domainSearch)} className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-2.5 pl-9 text-[13px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25" />
+                          </div>
+                          <button onClick={() => handleSearchDomains(domainSearch)} disabled={domainSearchLoading} className="px-4 py-2.5 bg-[#09090B] text-white rounded-[10px] text-xs font-semibold hover:bg-[#09090B]/80 disabled:opacity-50 flex items-center gap-1.5 shrink-0">
+                            {domainSearchLoading ? <Loader2 size={12} className="animate-spin" /> : <Search size={12} />}
+                            Check
+                          </button>
+                        </div>
+                        {domainResults.length > 0 && (
+                          <div className="space-y-1.5">
+                            {domainResults.map(d => (
+                              <div key={d.domain} onClick={() => d.available && setBlueprint({ ...blueprint, domain: d.domain })} className={cn("flex justify-between items-center p-3 rounded-xl transition-colors text-sm", d.available ? "cursor-pointer hover:bg-emerald-500/5" : "opacity-40 cursor-not-allowed", blueprint.domain === d.domain && "bg-emerald-500/10 border border-emerald-500")}>
+                                <div className="flex items-center gap-2">{blueprint.domain === d.domain ? <CheckCircle2 size={12} className="text-emerald-500" /> : <Globe size={12} className="opacity-30" />}<span className="font-mono font-bold text-xs">{d.domain}</span></div>
+                                <div className="flex items-center gap-2">
+                                  <span className={cn("text-[9px] font-bold uppercase px-2 py-0.5 rounded-full", d.available ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-500")}>{d.available ? 'Available' : 'Taken'}</span>
+                                  {d.available && <a href={`https://www.namecheap.com/domains/registration/results/?domain=${encodeURIComponent(d.domain)}`} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-[9px] font-bold text-blue-500 hover:underline">Register →</a>}
+                                </div>
                               </div>
                             ))}
                           </div>
-                          <button className={cn(
-                            "w-full py-3 rounded-xl text-xs font-semibold transition-all",
-                            blueprint.plan === plan.id
-                              ? "bg-white text-[#09090B]"
-                              : "bg-black/5 hover:bg-black/10"
-                          )}>
-                            {blueprint.plan === plan.id ? 'Selected' : plan.cta}
-                          </button>
+                        )}
+                        <div className="bg-[#F5F5F4] rounded-xl p-3 text-xs font-mono text-black/40">Free: <span className="text-black/70 font-bold">{blueprint.projectId || 'your-app'}.shipsaas.io</span></div>
+                      </div>
+                    </div>
+
+                    {/* Preview card */}
+                    <div className="bg-[#09090B] text-white p-10 rounded-2xl brutal-shadow flex flex-col justify-between sticky top-24 h-fit">
+                      <div>
+                        <p className="text-[10px] font-mono uppercase opacity-40 tracking-widest mb-4">Live Preview</p>
+                        <h3 className="text-4xl font-bold tracking-[-0.03em] mb-2">{blueprint.appName || 'Your App'}</h3>
+                        <p className="text-sm opacity-50">{blueprint.domain || `${blueprint.projectId || 'your-app'}.vercel.app`}</p>
+                      </div>
+                      <div className="space-y-4 mt-10">
+                        {[
+                          ['Style', blueprint.style],
+                          ['Source', blueprint.source],
+                          ['Hosting', 'Vercel'],
+                          ['Auth', blueprint.authEnabled ? 'Firebase' : 'None'],
+                        ].map(([k, v]) => (
+                          <div key={k} className="flex justify-between items-center border-b border-white/10 pb-2">
+                            <p className="text-[10px] font-mono uppercase opacity-40">{k}</p>
+                            <p className="text-sm font-bold uppercase tracking-tighter">{v}</p>
+                          </div>
+                        ))}
+                        <div className="flex justify-between items-center border-b border-white/10 pb-2">
+                          <p className="text-[10px] font-mono uppercase opacity-40">Accent</p>
+                          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: blueprint.color }} />
                         </div>
                       </div>
-                    ))}
+                    </div>
                   </div>
                 )}
               </StepShell>
             )}
 
-            {/* Step 6: Deploy */}
-            {step === 6 && (
+            {/* Step 3: Deploy */}
+            {step === 3 && (
               <StepShell
                 key="deploy"
-                phase="Step 07 of 07"
+                phase="Step 04 of 04"
                 title={isDeploying ? <>Shipping<br /><span className="opacity-30">your project...</span></> : <>Your project<br /><span className="opacity-30">is Live.</span></>}
                 subtitle={isDeploying ? 'Building, provisioning, and deploying your infrastructure.' : 'Pipeline complete. Your SaaS is in production.'}
               >
