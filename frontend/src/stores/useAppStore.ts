@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { User } from 'firebase/auth';
 import { signUpWithEmail, signInWithEmail, signInWithApple, signInWithGoogle, signOut, onAuth, deleteAccount, sendPasswordReset, resendVerificationEmail } from '../services/auth';
 import { generateAppCode } from '../services/gemini';
-import { saveProject, getUserProjects, updateProject, saveApiKeys, loadApiKeys, loadUserProfile, saveProfileName, type ProjectDoc } from '../services/projects';
+import { saveProject, getUserProjects, updateProject, removeProject, saveApiKeys, loadApiKeys, loadUserProfile, saveProfileName, type ProjectDoc } from '../services/projects';
 import type { Blueprint, ShippedProject, ViewType } from '../types';
 
 // Number of testimonials (kept in sync with TESTIMONIALS array in App.tsx)
@@ -151,6 +151,7 @@ interface AppState {
 
   setDeleteConfirm: (v: boolean) => void;
   setDeleteLoading: (v: boolean) => void;
+  handleDeleteProject: (firestoreId: string) => Promise<void>;
   handleDeleteAccount: () => Promise<void>;
 
   // ── Lifecycle ───────────────────────────────────────
@@ -418,7 +419,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
       const newProject: ShippedProject = {
         id: projectDoc.id,
         name: blueprint.appName || 'Untitled',
-        url: data.deploymentUrl || `https://${blueprint.projectId}.shipio.app`,
+        url: data.deploymentUrl || `https://${blueprint.projectId}.vercel.app`,
         hosting: blueprint.hosting || 'Vercel',
         db: 'Firestore',
         auth: blueprint.authEnabled ? 'Firebase Auth' : 'None',
@@ -556,7 +557,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
       });
       if (!res.ok) throw new Error('Failed');
       const data = await res.json();
-      set({ aiResult: data.recommendation });
+      set({ aiResult: data });
     } catch {
       set({ aiResult: { error: 'Could not reach AI advisor. Try again later.' } });
     } finally {
@@ -612,6 +613,15 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
   setDeleteConfirm: (v) => set({ deleteConfirm: v }),
   setDeleteLoading: (v) => set({ deleteLoading: v }),
+
+  handleDeleteProject: async (firestoreId: string) => {
+    try {
+      await removeProject(firestoreId);
+      set(s => ({ shippedProjects: s.shippedProjects.filter(p => p.firestoreId !== firestoreId) }));
+    } catch {
+      // Silent fail
+    }
+  },
 
   handleDeleteAccount: async () => {
     set({ deleteLoading: true });

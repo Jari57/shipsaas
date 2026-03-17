@@ -734,7 +734,7 @@ export default function App() {
     domainSearch, autoMode, autoLoading, projectDescription, reviewEditing, aiReasoning,
     helpOpen, helpSection, aiAdvisorOpen, aiQuery, aiLoading, aiResult, testimonialIdx,
     tourActive, tourStep,
-    profileName, cardNumber, cardExpiry, cardCvc, profileSaved, apiKeys,
+    profileName, profileSaved, apiKeys,
     deleteConfirm, deleteLoading,
     setAuthMode, setEmail, setPassword, setConfirmPassword, setShowPassword, setAuthError,
     setTermsAccepted, setForgotPasswordMode,
@@ -745,11 +745,11 @@ export default function App() {
     setHelpOpen, setHelpSection, setAiAdvisorOpen, setAiQuery,
     setTestimonialIdx,
     setTourActive, setTourStep,
-    setProfileName, setCardNumber, setCardExpiry, setCardCvc, setProfileSaved,
+    setProfileName, setProfileSaved,
     setDeleteConfirm,
     handleEmailAuth, handleAppleAuth, handleGoogleAuth, handleSignOut,
     handleDeploy, handleAiRecommend, handleAutoSetup, handleDeleteAccount,
-    handleForgotPassword, handleResendVerification,
+    handleDeleteProject, handleForgotPassword, handleResendVerification,
     next, back, updateApiKey, nextTourStep, prevTourStep, rotateTestimonial,
     initAuth, initOnlineStatus,
   } = useAppStore();
@@ -1189,16 +1189,30 @@ export default function App() {
                     <tr><td colSpan={5} className="p-24 text-center text-black/20">
                       <Database size={48} className="mx-auto mb-4" />
                       <p className="text-xs font-medium uppercase tracking-wider">No projects shipped yet</p>
+                      <button onClick={() => { setStep(0); setView('onboarding'); }} className="mt-4 px-6 py-2 bg-[#09090B] text-white rounded-full text-xs font-semibold hover:scale-105 transition-transform">Create First Project</button>
                     </td></tr>
-                  ) : shippedProjects.map(p => (
-                    <tr key={p.id} className="hover:bg-black/[0.01] transition-colors">
+                  ) : shippedProjects.map(p => {
+                    const statusConfig = {
+                      live: { color: 'bg-emerald-500', label: 'Live', pulse: true },
+                      deploying: { color: 'bg-blue-500', label: 'Deploying', pulse: true },
+                      draft: { color: 'bg-amber-500', label: 'Draft', pulse: false },
+                      failed: { color: 'bg-red-500', label: 'Failed', pulse: false },
+                    }[p.status || 'draft'] || { color: 'bg-gray-400', label: p.status || 'Unknown', pulse: false };
+                    return (
+                    <tr key={p.id} className="hover:bg-black/[0.01] transition-colors group">
                       <td className="p-5"><p className="font-semibold">{p.name}</p><p className="text-[11px] text-black/30 mt-0.5">{p.id}</p></td>
-                      <td className="p-5"><a href={p.url} target="_blank" rel="noreferrer" className="text-sm underline underline-offset-4 hover:text-emerald-600 transition-colors">{p.url.replace('https://', '')}</a><p className="text-[11px] text-black/30 mt-0.5">{p.hosting}</p></td>
+                      <td className="p-5">{p.url ? <a href={p.url} target="_blank" rel="noreferrer" className="text-sm underline underline-offset-4 hover:text-emerald-600 transition-colors">{p.url.replace('https://', '')}</a> : <span className="text-sm text-black/30">No URL</span>}<p className="text-[11px] text-black/30 mt-0.5">{p.hosting}</p></td>
                       <td className="p-5"><p className="text-sm">{p.db}</p><p className="text-[11px] text-black/30 mt-0.5">Auth: {p.auth}</p></td>
                       <td className="p-5"><p className="text-xs">{p.admin}</p></td>
-                      <td className="p-5"><div className="flex items-center gap-2"><div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" /><span className="text-[11px] font-semibold uppercase tracking-wider">Active</span></div></td>
+                      <td className="p-5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2"><div className={cn('w-2 h-2 rounded-full', statusConfig.color, statusConfig.pulse && 'animate-pulse')} /><span className="text-[11px] font-semibold uppercase tracking-wider">{statusConfig.label}</span></div>
+                          {p.firestoreId && <button onClick={() => handleDeleteProject(p.firestoreId!)} className="opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity" title="Delete project"><Trash2 size={14} className="text-red-500" /></button>}
+                        </div>
+                      </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1207,9 +1221,91 @@ export default function App() {
 
         {/* ── Dashboard View ──────────────────────────── */}
         {view === 'dashboard' && user && (
-          <motion.div key="dashboard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="max-w-5xl mx-auto px-6 py-16 space-y-6">
-            <h2 className="text-4xl font-bold tracking-[-0.03em]">Welcome back.</h2>
-            <p className="text-black/40 text-sm">Select a project from Inventory or create a new one via Builder.</p>
+          <motion.div key="dashboard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="max-w-5xl mx-auto px-6 py-16 space-y-10">
+            <div className="space-y-3">
+              <h2 className="text-4xl font-bold tracking-[-0.03em]">Welcome back{profileName ? `, ${profileName}` : ''}.</h2>
+              <p className="text-black/40 text-sm">Here's an overview of your projects and activity.</p>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: 'Total Projects', value: String(shippedProjects.length), icon: Layers, color: 'text-blue-500' },
+                { label: 'Live', value: String(shippedProjects.filter(p => p.status === 'live').length), icon: Globe, color: 'text-emerald-500' },
+                { label: 'Drafts', value: String(shippedProjects.filter(p => p.status === 'draft' || !p.status).length), icon: FileText, color: 'text-amber-500' },
+                { label: 'Failed', value: String(shippedProjects.filter(p => p.status === 'failed').length), icon: AlertTriangle, color: 'text-red-500' },
+              ].map((stat, i) => (
+                <div key={i} className="bg-white p-6 rounded-2xl border border-black/[0.04] space-y-3">
+                  <div className={cn('w-8 h-8 rounded-lg bg-black/[0.03] flex items-center justify-center', stat.color)}><stat.icon size={16} /></div>
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-black/35">{stat.label}</p>
+                  <p className="text-2xl font-bold tracking-tight">{stat.value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Recent projects */}
+            {shippedProjects.length > 0 ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-lg">Recent Projects</h3>
+                  <button onClick={() => setView('inventory')} className="text-xs text-black/40 hover:text-black/70 transition-colors flex items-center gap-1">View all <ArrowRight size={12} /></button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {shippedProjects.slice(0, 6).map(p => {
+                    const statusColor = p.status === 'live' ? 'bg-emerald-500' : p.status === 'failed' ? 'bg-red-500' : 'bg-amber-500';
+                    return (
+                      <div key={p.id} className="bg-white p-6 rounded-2xl border border-black/[0.04] space-y-4 hover:border-black/[0.08] hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)] transition-all group">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-semibold">{p.name}</p>
+                            <p className="text-[11px] text-black/30 mt-0.5">{p.hosting}</p>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <div className={cn('w-2 h-2 rounded-full', statusColor)} />
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-black/40">{p.status || 'draft'}</span>
+                          </div>
+                        </div>
+                        {p.url && (
+                          <a href={p.url} target="_blank" rel="noreferrer" className="text-xs text-black/40 hover:text-emerald-600 transition-colors flex items-center gap-1 truncate">
+                            <ExternalLink size={10} /> {p.url.replace('https://', '')}
+                          </a>
+                        )}
+                        <div className="flex items-center justify-between pt-2 border-t border-black/5">
+                          <p className="text-[10px] text-black/25">{p.timestamp}</p>
+                          {p.firestoreId && <button onClick={() => handleDeleteProject(p.firestoreId!)} className="opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity"><Trash2 size={12} className="text-red-500" /></button>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white border border-black/[0.04] rounded-2xl p-16 text-center space-y-4">
+                <Rocket size={48} className="mx-auto text-black/10" />
+                <h3 className="font-bold text-lg">No projects yet</h3>
+                <p className="text-sm text-black/40 max-w-sm mx-auto">Create your first project with AI Auto-Setup or go through the step-by-step builder.</p>
+                <button onClick={() => { setStep(0); setView('onboarding'); }} className="px-6 py-3 bg-[#09090B] text-white rounded-full text-sm font-semibold hover:scale-105 transition-transform">Start Building</button>
+              </div>
+            )}
+
+            {/* Quick actions */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <button onClick={() => { setStep(0); setView('onboarding'); }} className="bg-white p-6 rounded-2xl border border-black/[0.04] hover:border-black/[0.08] transition-all text-left space-y-2 group">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-400 flex items-center justify-center text-white"><Rocket size={18} /></div>
+                <p className="font-semibold text-sm">New Project</p>
+                <p className="text-[11px] text-black/40">Launch the deployment pipeline</p>
+              </button>
+              <button onClick={() => setView('inventory')} className="bg-white p-6 rounded-2xl border border-black/[0.04] hover:border-black/[0.08] transition-all text-left space-y-2 group">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-white"><Layers size={18} /></div>
+                <p className="font-semibold text-sm">View Inventory</p>
+                <p className="text-[11px] text-black/40">Browse all your shipped projects</p>
+              </button>
+              <button onClick={() => setAiAdvisorOpen(true)} className="bg-white p-6 rounded-2xl border border-black/[0.04] hover:border-black/[0.08] transition-all text-left space-y-2 group">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-400 flex items-center justify-center text-white"><Bot size={18} /></div>
+                <p className="font-semibold text-sm">AI Stack Advisor</p>
+                <p className="text-[11px] text-black/40">Get personalized tech recommendations</p>
+              </button>
+            </div>
           </motion.div>
         )}
 
@@ -1267,73 +1363,32 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Credit Card / Billing */}
+              {/* Billing */}
               <div className="space-y-8">
                 <div className="bg-white p-8 rounded-2xl brutal-shadow space-y-6 border border-black/[0.04]">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-lg">Payment Method</h3>
-                    <DollarSign size={20} className="opacity-20" />
+                    <h3 className="font-semibold text-lg">Billing & Subscription</h3>
+                    <CreditCard size={20} className="opacity-20" />
                   </div>
-                  {/* Card preview */}
-                  <div className="bg-gradient-to-br from-[#09090B] to-[#1e1e2e] text-white p-6 rounded-2xl space-y-8">
+                  <div className="bg-gradient-to-br from-[#09090B] to-[#1e1e2e] text-white p-6 rounded-2xl space-y-4">
                     <div className="flex justify-between items-start">
-                      <CreditCard size={24} className="opacity-50" />
-                      <span className="text-[10px] font-medium uppercase tracking-wider opacity-40">Visa</span>
+                      <div>
+                        <p className="text-[10px] uppercase opacity-40 tracking-wider">Current Plan</p>
+                        <p className="text-xl font-bold capitalize mt-1">{blueprint.plan}</p>
+                      </div>
+                      <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase">Active</span>
                     </div>
-                    <p className="text-lg font-mono tracking-[0.25em]">
-                      {cardNumber ? cardNumber.replace(/(.{4})/g, '$1 ').trim() : '•••• •••• •••• ••••'}
-                    </p>
-                    <div className="flex justify-between">
-                      <div>
-                        <p className="text-[8px] uppercase opacity-40 tracking-wider">Name</p>
-                        <p className="text-xs font-mono">{profileName || user.displayName || 'YOUR NAME'}</p>
-                      </div>
-                      <div>
-                        <p className="text-[8px] uppercase opacity-40 tracking-wider">Expires</p>
-                        <p className="text-xs font-mono">{cardExpiry || 'MM/YY'}</p>
-                      </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-bold">{PLANS.find(p => p.id === blueprint.plan)?.price}</span>
+                      <span className="text-xs opacity-40">{PLANS.find(p => p.id === blueprint.plan)?.period}</span>
                     </div>
                   </div>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="text-[11px] font-medium uppercase tracking-wider text-black/35">Card Number</label>
-                      <input
-                        type="text"
-                        value={cardNumber}
-                        onChange={e => setCardNumber(e.target.value.replace(/\D/g, '').slice(0, 16))}
-                        placeholder="4242 4242 4242 4242"
-                        className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25"
-                      />
+                  <div className="bg-amber-50 border border-amber-200 p-5 rounded-2xl space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Clock size={14} className="text-amber-600" />
+                      <p className="text-sm font-semibold text-amber-800">Stripe Checkout — Coming Soon</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-[11px] font-medium uppercase tracking-wider text-black/35">Expiry</label>
-                        <input
-                          type="text"
-                          value={cardExpiry}
-                          onChange={e => {
-                            let v = e.target.value.replace(/\D/g, '').slice(0, 4);
-                            if (v.length > 2) v = v.slice(0, 2) + '/' + v.slice(2);
-                            setCardExpiry(v);
-                          }}
-                          placeholder="MM/YY"
-                          className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[11px] font-medium uppercase tracking-wider text-black/35">CVC</label>
-                        <input
-                          type="text"
-                          value={cardCvc}
-                          onChange={e => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                          placeholder="123"
-                          className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 text-[10px] opacity-30">
-                    <Lock size={10} /> <span>Encrypted with 256-bit SSL. We never store your full card number.</span>
+                    <p className="text-xs text-amber-700/70 leading-relaxed">Secure payment processing via Stripe is being integrated. You'll be able to upgrade your plan, manage billing, and add payment methods here.</p>
                   </div>
                 </div>
 
@@ -2306,17 +2361,14 @@ export default function App() {
                     <p className="font-bold text-lg">Import from GitHub</p>
                     <p className="text-xs opacity-60">Connect a repo and we'll handle the rest.</p>
                   </button>
-                  <button
-                    onClick={() => setBlueprint({ ...blueprint, source: 'zip' })}
-                    className={cn(
-                      "p-8 rounded-2xl border text-left space-y-4 transition-all",
-                      blueprint.source === 'zip' ? "bg-[#09090B] text-white border-[#09090B] brutal-shadow" : "bg-white border-black/10 hover:border-black"
-                    )}
+                  <div
+                    className="p-8 rounded-2xl border text-left space-y-4 bg-white border-black/10 opacity-50 cursor-not-allowed relative"
                   >
+                    <span className="absolute top-4 right-4 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 text-[8px] font-bold uppercase">Coming Soon</span>
                     <FolderArchive size={32} />
                     <p className="font-bold text-lg">Upload ZIP</p>
                     <p className="text-xs opacity-60">Drop a project folder and deploy instantly.</p>
-                  </button>
+                  </div>
                   <button
                     onClick={() => setBlueprint({ ...blueprint, source: 'template' })}
                     className={cn(
@@ -2345,15 +2397,7 @@ export default function App() {
                       </div>
                     </motion.div>
                   )}
-                  {blueprint.source === 'zip' && (
-                    <motion.div key="zip" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-                      <div className="bg-white border-2 border-dashed border-black/20 rounded-2xl p-12 mt-4 text-center cursor-pointer hover:border-black/40 transition-colors" onClick={() => fileRef.current?.click()}>
-                        <input ref={fileRef} type="file" accept=".zip" className="hidden" onChange={e => setUploadedFile(e.target.files?.[0]?.name || null)} />
-                        <Upload size={32} className="mx-auto mb-4 opacity-30" />
-                        {uploadedFile ? <p className="font-bold">{uploadedFile} <CheckCircle2 size={14} className="inline text-emerald-500" /></p> : <><p className="font-bold">Drop your ZIP here</p><p className="text-xs opacity-40 mt-1">or click to browse</p></>}
-                      </div>
-                    </motion.div>
-                  )}
+
                   {blueprint.source === 'template' && (
                     <motion.div key="tpl" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
@@ -2395,34 +2439,30 @@ export default function App() {
                       />
                     </div>
                     <div className="space-y-2">
+                      <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Clock size={12} className="text-amber-600" />
+                          <p className="text-xs font-semibold text-amber-800">Custom Domains — Coming Soon</p>
+                        </div>
+                        <p className="text-[11px] text-amber-700/70">Domain registration and DNS management is being integrated. For now, use the free .shipsaas.io subdomain below.</p>
+                      </div>
                       {[
-                        { ext: '.com', price: '$12.99/yr', avail: true },
-                        { ext: '.io', price: '$49.99/yr', avail: true },
-                        { ext: '.ai', price: '$79.99/yr', avail: false },
-                        { ext: '.app', price: '$14.99/yr', avail: true },
-                        { ext: '.dev', price: '$12.99/yr', avail: true },
+                        { ext: '.com', price: '$12.99/yr' },
+                        { ext: '.io', price: '$49.99/yr' },
+                        { ext: '.ai', price: '$79.99/yr' },
+                        { ext: '.app', price: '$14.99/yr' },
+                        { ext: '.dev', price: '$12.99/yr' },
                       ].map(d => (
                         <div
                           key={d.ext}
-                          onClick={() => d.avail && setBlueprint({ ...blueprint, domain: (domainSearch || blueprint.projectId || 'app') + d.ext })}
-                          className={cn(
-                            "flex justify-between items-center p-4 rounded-xl transition-colors",
-                            !d.avail && "opacity-30 cursor-not-allowed",
-                            d.avail && "cursor-pointer hover:bg-emerald-500/5",
-                            blueprint.domain === (domainSearch || blueprint.projectId || 'app') + d.ext && "bg-emerald-500/10 border border-emerald-500"
-                          )}
+                          className="flex justify-between items-center p-4 rounded-xl opacity-30 cursor-not-allowed"
                         >
                           <div className="flex items-center gap-3">
-                            {blueprint.domain === (domainSearch || blueprint.projectId || 'app') + d.ext
-                              ? <CheckCircle2 size={14} className="text-emerald-500" />
-                              : <Globe size={14} className="opacity-30" />
-                            }
+                            <Globe size={14} className="opacity-30" />
                             <p className="font-bold font-mono">{(domainSearch || blueprint.projectId || 'app')}{d.ext}</p>
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className={cn("text-[9px] font-bold uppercase px-2 py-0.5 rounded-full", d.avail ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-500")}>
-                              {d.avail ? 'Available' : 'Taken'}
-                            </span>
+                            <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600">Coming Soon</span>
                             <p className="text-[10px] font-mono opacity-50">{d.price}</p>
                           </div>
                         </div>
@@ -2463,19 +2503,26 @@ export default function App() {
                 nextDisabled={!blueprint.hosting}
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {HOSTING_PROVIDERS.map(p => (
+                  {HOSTING_PROVIDERS.map(p => {
+                    const isSupported = p.id === 'vercel';
+                    return (
                     <div
                       key={p.id}
-                      onClick={() => setBlueprint({ ...blueprint, hosting: p.id })}
+                      onClick={() => isSupported && setBlueprint({ ...blueprint, hosting: p.id })}
                       className={cn(
-                        "p-8 rounded-2xl border cursor-pointer transition-all relative group",
+                        "p-8 rounded-2xl border transition-all relative group",
+                        !isSupported && "opacity-50 cursor-not-allowed",
+                        isSupported && "cursor-pointer",
                         blueprint.hosting === p.id
                           ? "bg-[#09090B] text-white border-[#09090B] brutal-shadow"
-                          : "bg-white border-black/10 hover:border-black"
+                          : isSupported ? "bg-white border-black/10 hover:border-black" : "bg-white border-black/10"
                       )}
                     >
-                      {p.popular && (
+                      {p.popular && isSupported && (
                         <span className="absolute top-4 right-4 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[8px] font-bold uppercase">Popular</span>
+                      )}
+                      {!isSupported && (
+                        <span className="absolute top-4 right-4 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 text-[8px] font-bold uppercase">Coming Soon</span>
                       )}
                       <div className="space-y-4">
                         <div className="flex items-center gap-3">
@@ -2500,7 +2547,8 @@ export default function App() {
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </StepShell>
             )}
@@ -2902,14 +2950,24 @@ export default function App() {
 
                     {!isDeploying && (
                       <div className="space-y-3 pt-4">
-                        <a
-                          href={`https://${blueprint.projectId}.vercel.app`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="block w-full bg-[#09090B] text-white py-4 rounded-xl text-center font-semibold hover:scale-105 transition-transform"
-                        >
-                          Open Application
-                        </a>
+                        {(() => {
+                          const latestProject = shippedProjects.find(p => p.name === blueprint.appName);
+                          const deployUrl = latestProject?.url || `https://${blueprint.projectId}.vercel.app`;
+                          return deployUrl && deployUrl !== '' ? (
+                            <a
+                              href={deployUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="block w-full bg-[#09090B] text-white py-4 rounded-xl text-center font-semibold hover:scale-105 transition-transform"
+                            >
+                              Open Application
+                            </a>
+                          ) : (
+                            <div className="w-full bg-[#09090B]/10 text-black/40 py-4 rounded-xl text-center font-semibold">
+                              Saved as Draft — No URL yet
+                            </div>
+                          );
+                        })()}
                         <button
                           onClick={() => { setStep(1); setView('onboarding'); }}
                           className="block w-full border border-black/10 py-3 rounded-xl text-center text-xs font-semibold hover:border-black transition-colors"
