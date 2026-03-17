@@ -3,6 +3,7 @@ import type { User } from 'firebase/auth';
 import { signUpWithEmail, signInWithEmail, signInWithApple, signInWithGoogle, signOut, onAuth, deleteAccount, sendPasswordReset, resendVerificationEmail } from '../services/auth';
 import { generateAppCode } from '../services/gemini';
 import { saveProject, getUserProjects, updateProject, removeProject, saveApiKeys, loadApiKeys, loadUserProfile, saveProfileName, type ProjectDoc } from '../services/projects';
+import { verifyIntegration, searchDomains as searchDomainsApi, type IntegrationStatus, type DomainResult } from '../services/integrations';
 import type { Blueprint, ShippedProject, ViewType } from '../types';
 
 // Number of testimonials (kept in sync with TESTIMONIALS array in App.tsx)
@@ -144,6 +145,18 @@ interface AppState {
   setProfileSaved: (v: boolean) => void;
   setApiKeys: (v: Record<string, string>) => void;
   updateApiKey: (key: string, value: string) => void;
+
+  // ── Integrations ───────────────────────────────────
+  integrationStatus: Record<string, IntegrationStatus & { loading?: boolean }>;
+  domainResults: DomainResult[];
+  domainSearchLoading: boolean;
+
+  setIntegrationStatus: (v: Record<string, IntegrationStatus & { loading?: boolean }>) => void;
+  setDomainResults: (v: DomainResult[]) => void;
+  setDomainSearchLoading: (v: boolean) => void;
+  handleVerifyIntegration: (provider: string) => Promise<void>;
+  handleDisconnectIntegration: (provider: string) => void;
+  handleSearchDomains: (query: string) => Promise<void>;
 
   // ── Account Deletion ───────────────────────────────
   deleteConfirm: boolean;
@@ -604,6 +617,50 @@ export const useAppStore = create<AppState>()((set, get) => ({
     if (user) {
       const keys = { ...get().apiKeys, [key]: value };
       saveApiKeys(user.uid, keys).catch(() => {});
+    }
+  },
+
+  // ── Integrations state ────────────────────────────
+  integrationStatus: {},
+  domainResults: [],
+  domainSearchLoading: false,
+
+  setIntegrationStatus: (v) => set({ integrationStatus: v }),
+  setDomainResults: (v) => set({ domainResults: v }),
+  setDomainSearchLoading: (v) => set({ domainSearchLoading: v }),
+
+  handleVerifyIntegration: async (provider: string) => {
+    const token = get().apiKeys[provider];
+    if (!token) return;
+    set(s => ({ integrationStatus: { ...s.integrationStatus, [provider]: { connected: false, loading: true } } }));
+    try {
+      const result = await verifyIntegration(provider, token);
+      set(s => ({ integrationStatus: { ...s.integrationStatus, [provider]: { ...result, loading: false } } }));
+    } catch {
+      set(s => ({ integrationStatus: { ...s.integrationStatus, [provider]: { connected: false, error: 'Verification failed', loading: false } } }));
+    }
+  },
+
+  handleDisconnectIntegration: (provider: string) => {
+    set(s => ({
+      apiKeys: { ...s.apiKeys, [provider]: '' },
+      integrationStatus: { ...s.integrationStatus, [provider]: { connected: false } },
+    }));
+    const user = get().user;
+    if (user) {
+      const keys = { ...get().apiKeys, [provider]: '' };
+      saveApiKeys(user.uid, keys).catch(() => {});
+    }
+  },
+
+  handleSearchDomains: async (query: string) => {
+    if (!query) return;
+    set({ domainSearchLoading: true, domainResults: [] });
+    try {
+      const results = await searchDomainsApi(query);
+      set({ domainResults: results, domainSearchLoading: false });
+    } catch {
+      set({ domainSearchLoading: false });
     }
   },
 

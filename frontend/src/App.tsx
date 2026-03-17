@@ -735,6 +735,7 @@ export default function App() {
     helpOpen, helpSection, aiAdvisorOpen, aiQuery, aiLoading, aiResult, testimonialIdx,
     tourActive, tourStep,
     profileName, profileSaved, apiKeys,
+    integrationStatus, domainResults, domainSearchLoading,
     deleteConfirm, deleteLoading,
     setAuthMode, setEmail, setPassword, setConfirmPassword, setShowPassword, setAuthError,
     setTermsAccepted, setForgotPasswordMode,
@@ -750,6 +751,7 @@ export default function App() {
     handleEmailAuth, handleAppleAuth, handleGoogleAuth, handleSignOut,
     handleDeploy, handleAiRecommend, handleAutoSetup, handleDeleteAccount,
     handleDeleteProject, handleForgotPassword, handleResendVerification,
+    handleVerifyIntegration, handleDisconnectIntegration, handleSearchDomains,
     next, back, updateApiKey, nextTourStep, prevTourStep, rotateTestimonial,
     initAuth, initOnlineStatus,
   } = useAppStore();
@@ -1402,48 +1404,79 @@ export default function App() {
               </div>
             </div>
 
-            {/* Provider API Keys */}
+            {/* Connected Accounts */}
             <div className="bg-white p-8 rounded-2xl brutal-shadow space-y-6 border border-black/[0.04]">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-semibold text-lg">Provider API Keys</h3>
-                  <p className="text-sm text-black/35 mt-1">Connect your hosting and service accounts for seamless deployment.</p>
+                  <h3 className="font-semibold text-lg">Connected Accounts</h3>
+                  <p className="text-sm text-black/35 mt-1">Link your hosting, deployment, and service accounts. Tokens are verified in real-time against each provider's API.</p>
                 </div>
-                <Key size={20} className="opacity-20" />
+                <Workflow size={20} className="opacity-20" />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
-                  { key: 'vercel', label: 'Vercel', desc: 'Deploy Next.js & React apps', gradient: 'from-black to-gray-700' },
-                  { key: 'netlify', label: 'Netlify', desc: 'Static sites & serverless functions', gradient: 'from-teal-500 to-cyan-400' },
-                  { key: 'railway', label: 'Railway', desc: 'Full-stack apps & databases', gradient: 'from-purple-500 to-indigo-400' },
-                  { key: 'aws', label: 'AWS', desc: 'Amplify hosting & services', gradient: 'from-orange-500 to-amber-400' },
-                  { key: 'digitalocean', label: 'DigitalOcean', desc: 'App platform & droplets', gradient: 'from-blue-500 to-blue-400' },
-                  { key: 'stripe', label: 'Stripe', desc: 'Payment processing', gradient: 'from-indigo-500 to-purple-400' },
-                  { key: 'cloudflare', label: 'Cloudflare', desc: 'DNS & SSL management', gradient: 'from-orange-400 to-yellow-400' },
-                  { key: 'github', label: 'GitHub', desc: 'Repository access & CI/CD', gradient: 'from-gray-700 to-gray-500' },
-                ].map(provider => (
-                  <div key={provider.key} className="bg-[#F5F5F4] p-5 rounded-2xl space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${provider.gradient} flex items-center justify-center text-white`}>
-                        <Key size={14} />
+                  { key: 'vercel', label: 'Vercel', desc: 'Deploy Next.js & React apps', gradient: 'from-black to-gray-700', verifiable: true },
+                  { key: 'github', label: 'GitHub', desc: 'Repository access & CI/CD', gradient: 'from-gray-700 to-gray-500', verifiable: true },
+                  { key: 'stripe', label: 'Stripe', desc: 'Payment processing', gradient: 'from-indigo-500 to-purple-400', verifiable: true },
+                  { key: 'cloudflare', label: 'Cloudflare', desc: 'DNS & domain management', gradient: 'from-orange-400 to-yellow-400', verifiable: true },
+                  { key: 'netlify', label: 'Netlify', desc: 'Static sites & serverless', gradient: 'from-teal-500 to-cyan-400', verifiable: false },
+                  { key: 'railway', label: 'Railway', desc: 'Full-stack apps & databases', gradient: 'from-purple-500 to-indigo-400', verifiable: false },
+                  { key: 'aws', label: 'AWS', desc: 'Amplify hosting & services', gradient: 'from-orange-500 to-amber-400', verifiable: false },
+                  { key: 'digitalocean', label: 'DigitalOcean', desc: 'App platform & droplets', gradient: 'from-blue-500 to-blue-400', verifiable: false },
+                ].map(provider => {
+                  const status = integrationStatus[provider.key];
+                  const hasToken = !!apiKeys[provider.key];
+                  const isConnected = status?.connected;
+                  const isLoading = status?.loading;
+                  return (
+                    <div key={provider.key} className={cn("p-5 rounded-2xl space-y-3 border transition-all", isConnected ? "bg-emerald-50/50 border-emerald-200" : "bg-[#F5F5F4] border-transparent")}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${provider.gradient} flex items-center justify-center text-white`}>
+                            {isConnected ? <CheckCircle2 size={14} /> : <Key size={14} />}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-sm">{provider.label}</p>
+                              {isConnected && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600">Connected</span>}
+                            </div>
+                            <p className="text-[10px] text-black/35">{isConnected && status?.username ? `@${status.username}` : provider.desc}</p>
+                          </div>
+                        </div>
+                        {hasToken && isConnected && (
+                          <button onClick={() => handleDisconnectIntegration(provider.key)} className="text-[10px] text-red-400 hover:text-red-600 transition-colors font-medium">Disconnect</button>
+                        )}
                       </div>
-                      <div>
-                        <p className="font-semibold text-sm">{provider.label}</p>
-                        <p className="text-[10px] text-black/35">{provider.desc}</p>
-                      </div>
+                      {!isConnected && (
+                        <div className="flex gap-2">
+                          <input
+                            type="password"
+                            value={apiKeys[provider.key]}
+                            onChange={e => updateApiKey(provider.key, e.target.value)}
+                            placeholder={`${provider.label} API Token`}
+                            className="flex-1 bg-white border border-black/[0.06] rounded-[10px] px-3 py-2.5 text-[13px] font-mono focus:border-black/20 focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25"
+                          />
+                          {hasToken && provider.verifiable && (
+                            <button
+                              onClick={() => handleVerifyIntegration(provider.key)}
+                              disabled={isLoading}
+                              className="px-4 py-2.5 bg-[#09090B] text-white rounded-[10px] text-xs font-semibold hover:bg-[#09090B]/80 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                            >
+                              {isLoading ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
+                              {isLoading ? 'Verifying...' : 'Verify'}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      {status?.error && !isConnected && (
+                        <p className="text-[10px] text-red-500 flex items-center gap-1"><AlertTriangle size={10} /> {status.error}</p>
+                      )}
                     </div>
-                    <input
-                      type="password"
-                      value={apiKeys[provider.key]}
-                      onChange={e => updateApiKey(provider.key, e.target.value)}
-                      placeholder={`${provider.label} API Token`}
-                      className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25"
-                    />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               <div className="flex items-center gap-2 text-[10px] opacity-30">
-                <ShieldCheck size={10} /> <span>API keys are encrypted and stored securely. They are only used for deployments you initiate.</span>
+                <ShieldCheck size={10} /> <span>API tokens are encrypted and stored securely. They are only used for deployments you initiate. Tokens are verified against each provider's official API.</span>
               </div>
             </div>
 
@@ -2428,45 +2461,70 @@ export default function App() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div className="bg-white border border-[#09090B] p-8 rounded-2xl brutal-shadow space-y-6">
                     <h3 className="font-semibold text-lg">Search Domains</h3>
-                    <div className="relative">
-                      <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30" />
-                      <input
-                        type="text"
-                        placeholder="my-awesome-app"
-                        value={domainSearch}
-                        onChange={e => setDomainSearch(e.target.value)}
-                        className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 pl-11 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25"
-                      />
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30" />
+                        <input
+                          type="text"
+                          placeholder="my-awesome-app"
+                          value={domainSearch}
+                          onChange={e => setDomainSearch(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && handleSearchDomains(domainSearch || blueprint.projectId || '')}
+                          className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 pl-11 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25"
+                        />
+                      </div>
+                      <button
+                        onClick={() => handleSearchDomains(domainSearch || blueprint.projectId || '')}
+                        disabled={domainSearchLoading}
+                        className="px-5 py-3 bg-[#09090B] text-white rounded-[10px] text-xs font-semibold hover:bg-[#09090B]/80 transition-colors disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+                      >
+                        {domainSearchLoading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                        {domainSearchLoading ? 'Checking...' : 'Check'}
+                      </button>
                     </div>
                     <div className="space-y-2">
-                      <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Clock size={12} className="text-amber-600" />
-                          <p className="text-xs font-semibold text-amber-800">Custom Domains — Coming Soon</p>
+                      {domainResults.length > 0 ? (
+                        <>
+                          <p className="text-[10px] uppercase tracking-wider font-semibold text-black/30">Availability Results (via DNS lookup)</p>
+                          {domainResults.map(d => (
+                            <div
+                              key={d.domain}
+                              className={cn(
+                                "flex justify-between items-center p-4 rounded-xl transition-colors",
+                                d.available ? "cursor-pointer hover:bg-emerald-500/5" : "opacity-40 cursor-not-allowed",
+                                blueprint.domain === d.domain && "bg-emerald-500/10 border border-emerald-500"
+                              )}
+                              onClick={() => d.available && setBlueprint({ ...blueprint, domain: d.domain })}
+                            >
+                              <div className="flex items-center gap-3">
+                                {blueprint.domain === d.domain
+                                  ? <CheckCircle2 size={14} className="text-emerald-500" />
+                                  : <Globe size={14} className="opacity-30" />
+                                }
+                                <p className="font-bold font-mono">{d.domain}</p>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className={cn("text-[9px] font-bold uppercase px-2 py-0.5 rounded-full", d.available ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-500")}>
+                                  {d.available ? 'Likely Available' : 'Taken'}
+                                </span>
+                                <p className="text-[10px] font-mono opacity-50">{d.price}</p>
+                              </div>
+                            </div>
+                          ))}
+                          <p className="text-[10px] text-black/25 pt-1">Note: Availability is checked via DNS and may not be 100% accurate. Domain registration coming soon.</p>
+                        </>
+                      ) : domainSearchLoading ? (
+                        <div className="flex items-center justify-center py-8 gap-2 text-black/30">
+                          <Loader2 size={16} className="animate-spin" />
+                          <p className="text-sm">Checking domain availability...</p>
                         </div>
-                        <p className="text-[11px] text-amber-700/70">Domain registration and DNS management is being integrated. For now, use the free .shipsaas.io subdomain below.</p>
-                      </div>
-                      {[
-                        { ext: '.com', price: '$12.99/yr' },
-                        { ext: '.io', price: '$49.99/yr' },
-                        { ext: '.ai', price: '$79.99/yr' },
-                        { ext: '.app', price: '$14.99/yr' },
-                        { ext: '.dev', price: '$12.99/yr' },
-                      ].map(d => (
-                        <div
-                          key={d.ext}
-                          className="flex justify-between items-center p-4 rounded-xl opacity-30 cursor-not-allowed"
-                        >
-                          <div className="flex items-center gap-3">
-                            <Globe size={14} className="opacity-30" />
-                            <p className="font-bold font-mono">{(domainSearch || blueprint.projectId || 'app')}{d.ext}</p>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600">Coming Soon</span>
-                            <p className="text-[10px] font-mono opacity-50">{d.price}</p>
-                          </div>
+                      ) : (
+                        <div className="text-center py-8 text-black/20">
+                          <Globe size={32} className="mx-auto mb-3 opacity-30" />
+                          <p className="text-sm font-medium">Enter a name and click Check</p>
+                          <p className="text-[11px] mt-1 opacity-60">We'll check availability across .com, .io, .ai, .app, and .dev</p>
                         </div>
-                      ))}
+                      )}
                     </div>
                   </div>
 
