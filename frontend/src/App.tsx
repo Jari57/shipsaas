@@ -529,7 +529,7 @@ function AIAdvisorPanel({ open, onClose, query, onQueryChange, onSubmit, loading
                 onChange={e => onQueryChange(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), onSubmit())}
                 placeholder="e.g. A fitness tracking app with social features, workout logging, and leaderboards..."
-                className="w-full bg-white border border-black/[0.08] rounded-xl pl-11 pr-5 pt-4 pb-16 text-sm leading-relaxed resize-none h-32 focus:ring-2 focus:ring-black/10 focus:border-black/20 focus:outline-none transition-all placeholder:text-black/30 shadow-sm"
+                className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] pl-11 pr-5 pt-4 pb-16 text-[14px] leading-relaxed resize-none h-32 focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25"
               />
               <div className="absolute bottom-3 right-3 flex items-center gap-2">
                 <span className="text-[10px] font-mono opacity-20">{query.length > 0 ? `${query.length} chars` : 'Enter ↵ to submit'}</span>
@@ -1242,7 +1242,7 @@ export default function App() {
                       value={profileName || user.displayName || ''}
                       onChange={e => setProfileName(e.target.value)}
                       placeholder="Your name"
-                      className="w-full bg-white border border-black/[0.08] rounded-xl px-4 py-3.5 text-sm focus:ring-2 focus:ring-black/10 focus:border-black/20 focus:outline-none transition-all shadow-sm"
+                      className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25"
                     />
                   </div>
                   <div className="space-y-2">
@@ -1251,7 +1251,7 @@ export default function App() {
                       type="email"
                       value={user.email || ''}
                       disabled
-                      className="w-full bg-[#F5F5F4] border border-black/[0.04] rounded-xl px-4 py-3.5 text-sm opacity-50 cursor-not-allowed"
+                      className="w-full bg-[#F3F3F2] border border-black/[0.04] rounded-[10px] px-4 py-3 text-[14px] text-black/40 cursor-not-allowed"
                     />
                   </div>
                   <div className="space-y-2">
@@ -1299,7 +1299,7 @@ export default function App() {
                         value={cardNumber}
                         onChange={e => setCardNumber(e.target.value.replace(/\D/g, '').slice(0, 16))}
                         placeholder="4242 4242 4242 4242"
-                        className="w-full bg-white border border-black/[0.08] rounded-xl px-4 py-3.5 text-sm focus:ring-2 focus:ring-black/10 focus:border-black/20 focus:outline-none transition-all shadow-sm"
+                        className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -1314,7 +1314,7 @@ export default function App() {
                             setCardExpiry(v);
                           }}
                           placeholder="MM/YY"
-                          className="w-full bg-white border border-black/[0.08] rounded-xl px-4 py-3.5 text-sm focus:ring-2 focus:ring-black/10 focus:border-black/20 focus:outline-none transition-all shadow-sm"
+                          className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25"
                         />
                       </div>
                       <div className="space-y-2">
@@ -1324,7 +1324,7 @@ export default function App() {
                           value={cardCvc}
                           onChange={e => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
                           placeholder="123"
-                          className="w-full bg-white border border-black/[0.08] rounded-xl px-4 py-3.5 text-sm focus:ring-2 focus:ring-black/10 focus:border-black/20 focus:outline-none transition-all shadow-sm"
+                          className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25"
                         />
                       </div>
                     </div>
@@ -1379,7 +1379,7 @@ export default function App() {
                       value={apiKeys[provider.key]}
                       onChange={e => updateApiKey(provider.key, e.target.value)}
                       placeholder={`${provider.label} API Token`}
-                      className="w-full bg-white border border-black/[0.08] rounded-xl px-4 py-3.5 text-sm focus:ring-2 focus:ring-black/10 focus:border-black/20 focus:outline-none transition-all shadow-sm"
+                      className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25"
                     />
                   </div>
                 ))}
@@ -1961,7 +1961,7 @@ export default function App() {
                       placeholder="you@company.com"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
-                      className="w-full bg-white border border-black/[0.08] rounded-xl px-4 py-3.5 text-sm focus:ring-2 focus:ring-black/10 focus:border-black/20 focus:outline-none transition-all shadow-sm"
+                      className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25"
                     />
                     <div className="relative">
                       <input
@@ -1970,7 +1970,7 @@ export default function App() {
                         value={password}
                         onChange={e => setPassword(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleEmailAuth()}
-                        className="w-full bg-white border border-black/[0.08] rounded-xl px-4 py-3.5 text-sm focus:ring-2 focus:ring-black/10 focus:border-black/20 focus:outline-none transition-all shadow-sm pr-12"
+                        className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25 pr-12"
                       />
                       <button onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 opacity-30 hover:opacity-80">
                         {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -2032,7 +2032,7 @@ export default function App() {
                       onChange={e => setProjectDescription(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleAutoSetup())}
                       placeholder="e.g. A project management SaaS with team collaboration, Kanban boards, real-time chat, and Stripe billing..."
-                      className="w-full bg-white border border-black/[0.08] rounded-xl px-4 py-3.5 text-sm resize-none h-24 focus:ring-2 focus:ring-black/10 focus:border-black/20 focus:outline-none transition-all shadow-sm placeholder:text-black/30"
+                      className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3.5 text-[14px] resize-none h-24 focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25"
                     />
                     <div className="flex items-center justify-between mt-4">
                       <div className="flex flex-wrap gap-2">
@@ -2110,7 +2110,7 @@ export default function App() {
                           placeholder="https://github.com/username/repo"
                           value={githubUrl}
                           onChange={e => { setGithubUrl(e.target.value); setBlueprint({ ...blueprint, githubRepo: e.target.value }); }}
-                          className="w-full bg-white border border-black/[0.08] rounded-xl px-4 py-3.5 text-sm font-mono focus:ring-2 focus:ring-black/10 focus:border-black/20 focus:outline-none transition-all shadow-sm"
+                          className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25"
                         />
                       </div>
                     </motion.div>
@@ -2161,7 +2161,7 @@ export default function App() {
                         placeholder="my-awesome-app"
                         value={domainSearch}
                         onChange={e => setDomainSearch(e.target.value)}
-                        className="w-full bg-white border border-black/[0.08] rounded-xl px-4 py-3.5 pl-11 text-sm font-mono focus:ring-2 focus:ring-black/10 focus:border-black/20 focus:outline-none transition-all shadow-sm"
+                        className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 pl-11 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25"
                       />
                     </div>
                     <div className="space-y-2">
@@ -2297,14 +2297,14 @@ export default function App() {
                           placeholder="App Name"
                           value={blueprint.appName}
                           onChange={e => setBlueprint({ ...blueprint, appName: e.target.value })}
-                          className="bg-white border border-black/[0.08] rounded-xl px-4 py-3.5 text-sm font-mono focus:ring-2 focus:ring-black/10 focus:border-black/20 focus:outline-none transition-all shadow-sm"
+                          className="bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25"
                         />
                         <input
                           type="text"
                           placeholder="project-id"
                           value={blueprint.projectId}
                           onChange={e => setBlueprint({ ...blueprint, projectId: e.target.value })}
-                          className="bg-white border border-black/[0.08] rounded-xl px-4 py-3.5 text-sm font-mono focus:ring-2 focus:ring-black/10 focus:border-black/20 focus:outline-none transition-all shadow-sm"
+                          className="bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25"
                         />
                       </div>
                     </div>
@@ -2427,11 +2427,11 @@ export default function App() {
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-2">
                             <label className="text-[10px] font-mono uppercase opacity-40 tracking-widest">App Name</label>
-                            <input type="text" value={blueprint.appName} onChange={e => setBlueprint({ ...blueprint, appName: e.target.value })} className="w-full bg-white border border-black/[0.08] rounded-xl px-4 py-3 text-sm font-mono focus:ring-2 focus:ring-black/10 focus:border-black/20 focus:outline-none transition-all shadow-sm" />
+                            <input type="text" value={blueprint.appName} onChange={e => setBlueprint({ ...blueprint, appName: e.target.value })} className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200" />
                           </div>
                           <div className="space-y-2">
                             <label className="text-[10px] font-mono uppercase opacity-40 tracking-widest">Project ID</label>
-                            <input type="text" value={blueprint.projectId} onChange={e => setBlueprint({ ...blueprint, projectId: e.target.value })} className="w-full bg-white border border-black/[0.08] rounded-xl px-4 py-3 text-sm font-mono focus:ring-2 focus:ring-black/10 focus:border-black/20 focus:outline-none transition-all shadow-sm" />
+                            <input type="text" value={blueprint.projectId} onChange={e => setBlueprint({ ...blueprint, projectId: e.target.value })} className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200" />
                           </div>
                         </div>
                       </ReviewCard>
@@ -2481,7 +2481,7 @@ export default function App() {
                         summary={<span className="font-bold font-mono">{blueprint.domain || `${blueprint.projectId || 'app'}.shipsaas.io`}</span>}
                       >
                         <div className="space-y-3">
-                          <input type="text" value={blueprint.domain || ''} onChange={e => setBlueprint({ ...blueprint, domain: e.target.value || undefined })} placeholder="custom-domain.com" className="w-full bg-white border border-black/[0.08] rounded-xl px-4 py-3 text-sm font-mono focus:ring-2 focus:ring-black/10 focus:border-black/20 focus:outline-none transition-all shadow-sm" />
+                          <input type="text" value={blueprint.domain || ''} onChange={e => setBlueprint({ ...blueprint, domain: e.target.value || undefined })} placeholder="custom-domain.com" className="w-full bg-[#F8F8F7] border border-black/[0.06] rounded-[10px] px-4 py-3 text-[14px] font-mono focus:border-black/20 focus:bg-white focus:outline-none focus:ring-0 transition-all duration-200 placeholder:text-black/25" />
                           <p className="text-[10px] opacity-40">Leave empty for free subdomain: {blueprint.projectId || 'app'}.shipsaas.io</p>
                         </div>
                       </ReviewCard>
