@@ -205,7 +205,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   // ── Auth state ──────────────────────────────────────
   user: null,
   authLoading: true,
-  authMode: 'signup',
+  authMode: 'signin',
   email: '',
   password: '',
   confirmPassword: '',

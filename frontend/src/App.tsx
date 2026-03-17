@@ -2185,14 +2185,12 @@ export default function App() {
                           </motion.div>
                         )}
 
-                        {/* Forgot password link (signin only) */}
-                        {authMode === 'signin' && (
-                          <div className="flex justify-end">
-                            <button onClick={() => setForgotPasswordMode(true)} className="text-[12px] text-black/40 hover:text-black/70 transition-colors underline underline-offset-2">
-                              Forgot password?
-                            </button>
-                          </div>
-                        )}
+                        {/* Forgot password link */}
+                        <div className="flex justify-end">
+                          <button onClick={() => { setAuthMode('signin'); setForgotPasswordMode(true); }} className="text-[12px] text-black/40 hover:text-black/70 transition-colors underline underline-offset-2">
+                            Forgot password?
+                          </button>
+                        </div>
 
                         {/* Error display */}
                         {authError && (
