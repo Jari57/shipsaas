@@ -55,16 +55,56 @@ export async function removeProject(projectDocId: string) {
   await deleteDoc(doc(db, 'projects', projectDocId));
 }
 
-// ── API Keys (stored in user doc, base64-encoded) ─────
+// ── API Keys (stored in user doc, AES-GCM encrypted) ──
 
-/** Save API keys to user doc (base64-encoded for basic obfuscation in transit/storage) */
+const SALT = 'shipsaas-key-enc-v1';
+
+async function deriveKey(userId: string): Promise<CryptoKey> {
+  const enc = new TextEncoder();
+  const material = await crypto.subtle.importKey('raw', enc.encode(userId + SALT), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: enc.encode(SALT), iterations: 100_000, hash: 'SHA-256' },
+    material,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt'],
+  );
+}
+
+async function encryptValue(userId: string, plaintext: string): Promise<string> {
+  if (!plaintext) return '';
+  const key = await deriveKey(userId);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(plaintext));
+  // Pack iv + ciphertext as hex
+  const buf = new Uint8Array(iv.byteLength + ct.byteLength);
+  buf.set(iv, 0);
+  buf.set(new Uint8Array(ct), iv.byteLength);
+  return Array.from(buf).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function decryptValue(userId: string, hex: string): Promise<string> {
+  if (!hex) return '';
+  // Handle legacy base64-encoded values
+  if (!/^[0-9a-f]+$/i.test(hex)) {
+    try { return atob(hex); } catch { return ''; }
+  }
+  const key = await deriveKey(userId);
+  const buf = new Uint8Array(hex.match(/.{1,2}/g)!.map(b => parseInt(b, 16)));
+  const iv = buf.slice(0, 12);
+  const ct = buf.slice(12);
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
+  return new TextDecoder().decode(pt);
+}
+
+/** Save API keys to user doc (AES-256-GCM encrypted) */
 export async function saveApiKeys(userId: string, keys: Record<string, string>) {
-  const encoded: Record<string, string> = {};
+  const encrypted: Record<string, string> = {};
   for (const [k, v] of Object.entries(keys)) {
-    encoded[k] = v ? btoa(v) : '';
+    encrypted[k] = await encryptValue(userId, v);
   }
   const ref = doc(db, 'users', userId);
-  await updateDoc(ref, { apiKeys: encoded });
+  await updateDoc(ref, { apiKeys: encrypted });
 }
 
 /** Load API keys from user doc */
@@ -72,12 +112,12 @@ export async function loadApiKeys(userId: string): Promise<Record<string, string
   const ref = doc(db, 'users', userId);
   const snap = await getDoc(ref);
   if (!snap.exists()) return {};
-  const encoded = snap.data()?.apiKeys || {};
-  const decoded: Record<string, string> = {};
-  for (const [k, v] of Object.entries(encoded)) {
-    try { decoded[k] = v ? atob(v as string) : ''; } catch { decoded[k] = ''; }
+  const encrypted = snap.data()?.apiKeys || {};
+  const decrypted: Record<string, string> = {};
+  for (const [k, v] of Object.entries(encrypted)) {
+    try { decrypted[k] = await decryptValue(userId, v as string); } catch { decrypted[k] = ''; }
   }
-  return decoded;
+  return decrypted;
 }
 
 /** Load user profile data */
@@ -92,4 +132,18 @@ export async function loadUserProfile(userId: string) {
 export async function saveProfileName(userId: string, name: string) {
   const ref = doc(db, 'users', userId);
   await updateDoc(ref, { profileName: name });
+}
+
+/** Save lockout state to Firestore */
+export async function saveLockoutState(userId: string, failedAttempts: number, lockoutUntil: number | null) {
+  const ref = doc(db, 'users', userId);
+  await updateDoc(ref, { lockout: { failedAttempts, lockoutUntil } });
+}
+
+/** Load lockout state from Firestore */
+export async function loadLockoutState(userId: string): Promise<{ failedAttempts: number; lockoutUntil: number | null } | null> {
+  const ref = doc(db, 'users', userId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  return snap.data()?.lockout || null;
 }

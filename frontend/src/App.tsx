@@ -78,6 +78,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 import ReactMarkdown from 'react-markdown';
+import JSZip from 'jszip';
 import { useAppStore } from './stores/useAppStore';
 
 // ─── Constants ──────────────────────────────────────────
@@ -144,32 +145,35 @@ const PLANS = [
   {
     id: 'starter' as const,
     name: 'Starter',
-    price: '$0',
-    period: '/mo',
-    description: 'Perfect for side projects.',
-    features: ['1 Project', 'Shared hosting', 'Community support', 'SSL included'],
-    cta: 'Start Free',
-    highlighted: false,
+    price: 'Free',
+    period: '',
+    description: 'Everything you need to ship.',
+    features: ['Unlimited projects', 'AI code generation', 'Vercel deployment', 'GitHub integration', 'Domain search', 'SSL included'],
+    cta: 'Current Plan',
+    highlighted: true,
+    available: true,
   },
   {
     id: 'pro' as const,
     name: 'Pro',
     price: '$29',
     period: '/mo',
-    description: 'For developers shipping fast.',
-    features: ['10 Projects', 'Custom domains', 'Priority support', 'Analytics', 'GitHub CI/CD'],
-    cta: 'Go Pro',
-    highlighted: true,
+    description: 'For teams shipping fast.',
+    features: ['Custom domains', 'Priority support', 'Analytics dashboard', 'GitHub CI/CD', 'Advanced templates'],
+    cta: 'Coming Soon',
+    highlighted: false,
+    available: false,
   },
   {
     id: 'agency' as const,
     name: 'Agency',
     price: '$99',
     period: '/mo',
-    description: 'For teams building at scale.',
-    features: ['Unlimited projects', 'White-label', 'Dedicated support', 'Custom templates', 'Team accounts', 'API access'],
-    cta: 'Contact Sales',
+    description: 'For agencies at scale.',
+    features: ['White-label', 'Dedicated support', 'Custom templates', 'Team accounts', 'API access', 'Priority builds'],
+    cta: 'Coming Soon',
     highlighted: false,
+    available: false,
   },
 ];
 
@@ -757,6 +761,34 @@ export default function App() {
   } = useAppStore();
 
   const fileRef = useRef<HTMLInputElement>(null);
+  const zipRef = useRef<HTMLInputElement>(null);
+  const { setUploadedFiles } = useAppStore();
+
+  const handleZipUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadedFile(file.name);
+    setBlueprint({ ...blueprint, source: 'zip' });
+    try {
+      const zip = await JSZip.loadAsync(file);
+      const extracted: Array<{ path: string; content: string }> = [];
+      const skipDirs = ['node_modules/', '.git/', 'dist/', 'build/', '.next/', '__pycache__/'];
+      for (const [path, entry] of Object.entries(zip.files)) {
+        if (entry.dir) continue;
+        if (skipDirs.some(d => path.includes(d))) continue;
+        if ((entry as any)._data?.uncompressedSize > 500000) continue;
+        try {
+          const content = await entry.async('string');
+          extracted.push({ path, content });
+        } catch { /* skip binary files */ }
+        if (extracted.length >= 80) break;
+      }
+      setUploadedFiles(extracted);
+    } catch {
+      setUploadedFile(null);
+      setUploadedFiles(null);
+    }
+  };
 
   useEffect(() => initAuth(), []);
   useEffect(() => initOnlineStatus(), []);
@@ -1130,9 +1162,9 @@ export default function App() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
               {[
                 { label: 'Total Projects', value: String(shippedProjects.length), icon: Rocket, color: 'text-blue-500' },
-                { label: 'Active Users', value: '1', icon: Users, color: 'text-emerald-500' },
-                { label: 'API Requests', value: '0', icon: Activity, color: 'text-purple-500' },
-                { label: 'Storage Used', value: '0 MB', icon: Database, color: 'text-orange-500' },
+                { label: 'Live Projects', value: String(shippedProjects.filter(p => p.status === 'live').length), icon: Users, color: 'text-emerald-500' },
+                { label: 'Draft Projects', value: String(shippedProjects.filter(p => p.status === 'draft').length), icon: Activity, color: 'text-purple-500' },
+                { label: 'Hosting', value: shippedProjects.length > 0 ? [...new Set(shippedProjects.map(p => p.hosting))].join(', ') : 'None', icon: Database, color: 'text-orange-500' },
               ].map((stat, i) => (
                 <div key={i} className="bg-white p-7 rounded-2xl brutal-shadow space-y-4 border border-black/[0.04]">
                   <div className={cn("w-9 h-9 rounded-xl bg-black/[0.03] flex items-center justify-center", stat.color)}><stat.icon size={18} /></div>
@@ -1143,13 +1175,20 @@ export default function App() {
             </div>
 
             <div className="bg-white rounded-2xl p-8 brutal-shadow space-y-6 border border-black/[0.04]">
-              <h3 className="font-semibold text-lg">Deployment Velocity</h3>
+              <h3 className="font-semibold text-lg">Deployment History</h3>
               <div className="h-[300px] w-full">
+                {shippedProjects.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-black/20 text-sm">Deploy your first project to see stats here.</div>
+                ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={[
-                    { name: 'Week 1', deployments: 45 }, { name: 'Week 2', deployments: 52 },
-                    { name: 'Week 3', deployments: 48 }, { name: 'Week 4', deployments: 70 },
-                  ]}>
+                  <AreaChart data={(() => {
+                    const byWeek: Record<string, number> = {};
+                    shippedProjects.forEach(p => {
+                      const d = p.timestamp || 'Unknown';
+                      byWeek[d] = (byWeek[d] || 0) + 1;
+                    });
+                    return Object.entries(byWeek).slice(-8).map(([name, deployments]) => ({ name, deployments }));
+                  })()}>
                     <defs>
                       <linearGradient id="colorDeploy" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#09090B" stopOpacity={0.1} />
@@ -1163,6 +1202,7 @@ export default function App() {
                     <Area type="monotone" dataKey="deployments" stroke="#09090B" strokeWidth={2} fillOpacity={1} fill="url(#colorDeploy)" />
                   </AreaChart>
                 </ResponsiveContainer>
+                )}
               </div>
             </div>
           </motion.div>
@@ -1385,12 +1425,12 @@ export default function App() {
                       <span className="text-xs opacity-40">{PLANS.find(p => p.id === blueprint.plan)?.period}</span>
                     </div>
                   </div>
-                  <div className="bg-amber-50 border border-amber-200 p-5 rounded-2xl space-y-2">
+                  <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl space-y-2">
                     <div className="flex items-center gap-2">
-                      <Clock size={14} className="text-amber-600" />
-                      <p className="text-sm font-semibold text-amber-800">Stripe Checkout — Coming Soon</p>
+                      <Check size={14} className="text-emerald-600" />
+                      <p className="text-sm font-semibold text-emerald-800">Free Plan — All Features Included</p>
                     </div>
-                    <p className="text-xs text-amber-700/70 leading-relaxed">Secure payment processing via Stripe is being integrated. You'll be able to upgrade your plan, manage billing, and add payment methods here.</p>
+                    <p className="text-xs text-emerald-700/70 leading-relaxed">You have full access to all ShipSaaS features including AI code generation, Vercel deployment, GitHub integration, and domain search. Paid plans with advanced features are coming soon.</p>
                   </div>
                 </div>
 
@@ -2395,13 +2435,17 @@ export default function App() {
                     <p className="text-xs opacity-60">Connect a repo and we'll handle the rest.</p>
                   </button>
                   <div
-                    className="p-8 rounded-2xl border text-left space-y-4 bg-white border-black/10 opacity-50 cursor-not-allowed relative"
+                    onClick={() => zipRef.current?.click()}
+                    className={cn(
+                      "p-8 rounded-2xl border text-left space-y-4 transition-all cursor-pointer",
+                      blueprint.source === 'zip' ? "bg-[#09090B] text-white border-[#09090B] brutal-shadow" : "bg-white border-black/10 hover:border-black"
+                    )}
                   >
-                    <span className="absolute top-4 right-4 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 text-[8px] font-bold uppercase">Coming Soon</span>
                     <FolderArchive size={32} />
                     <p className="font-bold text-lg">Upload ZIP</p>
-                    <p className="text-xs opacity-60">Drop a project folder and deploy instantly.</p>
+                    <p className="text-xs opacity-60">{uploadedFile ? `✓ ${uploadedFile}` : 'Drop a project folder and deploy instantly.'}</p>
                   </div>
+                  <input ref={zipRef} type="file" accept=".zip" className="hidden" onChange={handleZipUpload} />
                   <button
                     onClick={() => setBlueprint({ ...blueprint, source: 'template' })}
                     className={cn(
@@ -2507,11 +2551,14 @@ export default function App() {
                                 <span className={cn("text-[9px] font-bold uppercase px-2 py-0.5 rounded-full", d.available ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-500")}>
                                   {d.available ? 'Likely Available' : 'Taken'}
                                 </span>
+                                {d.available && (
+                                  <a href={`https://www.namecheap.com/domains/registration/results/?domain=${encodeURIComponent(d.domain)}`} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-[9px] font-bold text-blue-500 hover:underline">Register &rarr;</a>
+                                )}
                                 <p className="text-[10px] font-mono opacity-50">{d.price}</p>
                               </div>
                             </div>
                           ))}
-                          <p className="text-[10px] text-black/25 pt-1">Note: Availability is checked via DNS and may not be 100% accurate. Domain registration coming soon.</p>
+                          <p className="text-[10px] text-black/25 pt-1">Availability is estimated via DNS lookup and may not be 100% accurate. To register, visit <a href="https://www.namecheap.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-black/40">Namecheap</a>, <a href="https://www.cloudflare.com/products/registrar/" target="_blank" rel="noopener noreferrer" className="underline hover:text-black/40">Cloudflare</a>, or <a href="https://domains.google.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-black/40">Google Domains</a>.</p>
                         </>
                       ) : domainSearchLoading ? (
                         <div className="flex items-center justify-center py-8 gap-2 text-black/30">
@@ -2914,20 +2961,25 @@ export default function App() {
                     {PLANS.map(plan => (
                       <div
                         key={plan.id}
-                        onClick={() => setBlueprint({ ...blueprint, plan: plan.id })}
+                        onClick={() => plan.available && setBlueprint({ ...blueprint, plan: plan.id })}
                         className={cn(
-                          "p-8 rounded-2xl border cursor-pointer transition-all relative",
+                          "p-8 rounded-2xl border transition-all relative",
+                          !plan.available && "opacity-50 cursor-not-allowed",
+                          plan.available && "cursor-pointer",
                           blueprint.plan === plan.id
                             ? "bg-[#09090B] text-white border-[#09090B] brutal-shadow"
-                            : "bg-white border-black/10 hover:border-black",
+                            : plan.available ? "bg-white border-black/10 hover:border-black" : "bg-white border-black/10",
                           plan.highlighted && blueprint.plan !== plan.id && "border-emerald-500"
                         )}
                       >
-                        {plan.highlighted && (
+                        {plan.highlighted && plan.available && (
                           <span className={cn(
                             "absolute -top-3 left-6 px-3 py-1 rounded-full text-[9px] font-bold uppercase",
                             blueprint.plan === plan.id ? "bg-emerald-500 text-white" : "bg-emerald-500/10 text-emerald-600"
-                          )}>Most Popular</span>
+                          )}>Current Plan</span>
+                        )}
+                        {!plan.available && (
+                          <span className="absolute -top-3 left-6 px-3 py-1 rounded-full bg-amber-500/20 text-amber-600 text-[9px] font-bold uppercase">Coming Soon</span>
                         )}
                         <div className="space-y-6">
                           <div>

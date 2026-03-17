@@ -66,10 +66,12 @@ interface AppState {
   // ── Blueprint ───────────────────────────────────────
   blueprint: Blueprint;
   uploadedFile: string | null;
+  uploadedFiles: Array<{ path: string; content: string }> | null;
   githubUrl: string;
 
   setBlueprint: (v: Blueprint) => void;
   setUploadedFile: (v: string | null) => void;
+  setUploadedFiles: (v: Array<{ path: string; content: string }> | null) => void;
   setGithubUrl: (v: string) => void;
 
   // ── Deploy ──────────────────────────────────────────
@@ -132,16 +134,10 @@ interface AppState {
 
   // ── Profile ─────────────────────────────────────────
   profileName: string;
-  cardNumber: string;
-  cardExpiry: string;
-  cardCvc: string;
   profileSaved: boolean;
   apiKeys: Record<string, string>;
 
   setProfileName: (v: string) => void;
-  setCardNumber: (v: string) => void;
-  setCardExpiry: (v: string) => void;
-  setCardCvc: (v: string) => void;
   setProfileSaved: (v: boolean) => void;
   setApiKeys: (v: Record<string, string>) => void;
   updateApiKey: (key: string, value: string) => void;
@@ -253,11 +249,13 @@ export const useAppStore = create<AppState>()((set, get) => ({
         await signInWithEmail(email, password);
       }
       set({ step: 1, failedAttempts: 0, lockoutUntil: null });
+      try { localStorage.removeItem('shipsaas_lockout'); } catch {}
     } catch (e: any) {
       const newAttempts = failedAttempts + 1;
       const lockout = newAttempts >= 5 ? Date.now() + 60000 * Math.min(newAttempts - 4, 5) : null;
       const msg = e.message?.replace('Firebase: ', '') || 'Authentication failed';
       set({ authError: newAttempts >= 5 ? `Account temporarily locked. Too many failed attempts. Try again in ${Math.min(newAttempts - 4, 5)} minute(s).` : msg, failedAttempts: newAttempts, lockoutUntil: lockout });
+      try { localStorage.setItem('shipsaas_lockout', JSON.stringify({ failedAttempts: newAttempts, lockoutUntil: lockout })); } catch {}
     } finally {
       set({ authBusy: false });
     }
@@ -348,10 +346,12 @@ export const useAppStore = create<AppState>()((set, get) => ({
     plan: 'starter',
   },
   uploadedFile: null,
+  uploadedFiles: null,
   githubUrl: '',
 
   setBlueprint: (v) => set({ blueprint: v }),
   setUploadedFile: (v) => set({ uploadedFile: v }),
+  setUploadedFiles: (v) => set({ uploadedFiles: v }),
   setGithubUrl: (v) => set({ githubUrl: v }),
 
   // ── Deploy state ───────────────────────────────────
@@ -372,17 +372,43 @@ export const useAppStore = create<AppState>()((set, get) => ({
     const { user, blueprint, apiKeys } = get();
     if (!user) { set({ isDeploying: false }); return; }
 
+    // Guard: email verification required for email/password users
+    if (user.providerData?.[0]?.providerId === 'password' && !user.emailVerified) {
+      log('✗ Email not verified. Please check your inbox and verify your email before deploying.');
+      set({ isDeploying: false });
+      return;
+    }
+
+    // Guard: only Vercel hosting is currently supported
+    if (blueprint.hosting && blueprint.hosting !== 'vercel') {
+      log(`✗ ${blueprint.hosting} hosting is not yet supported. Please select Vercel as your hosting provider.`);
+      set({ isDeploying: false });
+      return;
+    }
+
     log('▸ Initializing pipeline...');
 
-    // Generate source code
-    log('▸ Generating source code from blueprint...');
+    const { uploadedFiles, githubUrl } = get();
+
+    // Source-specific: only generate AI code for template source
     let code: string | null = null;
-    try {
-      code = await generateAppCode(blueprint);
-      set({ generatedCode: code });
-      log('▸ Source code generated ✓');
-    } catch {
-      log('▸ Code generation offline — using template fallback');
+    if (blueprint.source === 'template') {
+      log('▸ Generating source code from blueprint...');
+      try {
+        code = await generateAppCode(blueprint);
+        if (code) {
+          set({ generatedCode: code });
+          log('▸ Source code generated ✓');
+        } else {
+          log('▸ Code generation unavailable — deploying with template');
+        }
+      } catch {
+        log('▸ Code generation offline — deploying with template');
+      }
+    } else if (blueprint.source === 'github' && githubUrl) {
+      log(`▸ Importing code from GitHub: ${githubUrl}`);
+    } else if (blueprint.source === 'zip' && uploadedFiles?.length) {
+      log(`▸ Deploying ${uploadedFiles.length} uploaded files...`);
     }
 
     // Call real deploy endpoint
@@ -399,6 +425,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
           vercelToken: apiKeys.vercel || undefined,
           githubToken: apiKeys.github || undefined,
           generatedCode: code || undefined,
+          githubRepo: blueprint.source === 'github' ? githubUrl : undefined,
+          uploadedFiles: blueprint.source === 'zip' ? uploadedFiles : undefined,
         }),
       });
       const data = await res.json();
@@ -408,6 +436,9 @@ export const useAppStore = create<AppState>()((set, get) => ({
         log('▸ Saving project as draft...');
       } else {
         log(`▸ Live at ${data.deploymentUrl} ✓`);
+      }
+      if (data.warnings) {
+        data.warnings.forEach((w: string) => log(`⚠ ${w}`));
       }
 
       // Save to Firestore
@@ -591,16 +622,10 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
   // ── Profile state ──────────────────────────────────
   profileName: '',
-  cardNumber: '',
-  cardExpiry: '',
-  cardCvc: '',
   profileSaved: false,
   apiKeys: { vercel: '', netlify: '', railway: '', aws: '', digitalocean: '', stripe: '', cloudflare: '', github: '' },
 
   setProfileName: (v) => set({ profileName: v }),
-  setCardNumber: (v) => set({ cardNumber: v }),
-  setCardExpiry: (v) => set({ cardExpiry: v }),
-  setCardCvc: (v) => set({ cardCvc: v }),
   setProfileSaved: (v) => {
     set({ profileSaved: v });
     if (v) {
@@ -694,6 +719,18 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
   // ── Lifecycle ──────────────────────────────────────
   initAuth: () => {
+    // Restore lockout state from localStorage
+    try {
+      const saved = localStorage.getItem('shipsaas_lockout');
+      if (saved) {
+        const { failedAttempts, lockoutUntil } = JSON.parse(saved);
+        if (lockoutUntil && Date.now() < lockoutUntil) {
+          set({ failedAttempts, lockoutUntil });
+        } else {
+          localStorage.removeItem('shipsaas_lockout');
+        }
+      }
+    } catch {}
     return onAuth(async (u) => {
       set({ user: u, authLoading: false });
       if (u) {

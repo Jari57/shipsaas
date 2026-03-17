@@ -46,6 +46,11 @@ const deploySchema = z.object({
   vercelToken: z.string().max(500).optional(),
   githubToken: z.string().max(500).optional(),
   generatedCode: z.string().max(500000).optional(),
+  githubRepo: z.string().max(500).optional(),
+  uploadedFiles: z.array(z.object({
+    path: z.string().max(500),
+    content: z.string().max(500000),
+  })).max(100).optional(),
 });
 
 const projectStatusSchema = z.object({
@@ -67,17 +72,31 @@ function validate(schema) {
 }
 
 // Rate limiting (simple in-memory)
-const rateMap = new Map();
-function rateLimit(req, res, next) {
-  const ip = req.ip;
+// Rate limiting (Firestore-backed, persists across cold starts)
+async function rateLimit(req, res, next) {
+  const ip = (req.ip || req.headers["x-forwarded-for"] || "unknown").replace(/[^a-zA-Z0-9.:]/g, "_");
   const now = Date.now();
-  const window = 60000;
+  const windowMs = 60000;
   const max = 30;
-  const hits = (rateMap.get(ip) || []).filter((t) => now - t < window);
-  if (hits.length >= max) return res.status(429).json({ error: "Too many requests" });
-  hits.push(now);
-  rateMap.set(ip, hits);
-  next();
+  const ref = firestore.doc(`rateLimit/${ip}`);
+
+  try {
+    const snap = await ref.get();
+    const data = snap.exists ? snap.data() : { hits: [], updatedAt: 0 };
+    const recentHits = (data.hits || []).filter((t) => now - t < windowMs);
+
+    if (recentHits.length >= max) {
+      return res.status(429).json({ error: "Too many requests" });
+    }
+
+    recentHits.push(now);
+    // Fire-and-forget update to avoid blocking the request
+    ref.set({ hits: recentHits, updatedAt: now }).catch(() => {});
+    next();
+  } catch {
+    // If Firestore fails, allow the request rather than blocking
+    next();
+  }
 }
 
 // Health check
@@ -199,9 +218,48 @@ Rules:
 });
 
 // ─── Real Deployment (Vercel) ──────────────────────────
+// Helper: Recursively fetch all files from a GitHub repo
+async function fetchGitHubTree(owner, repo, token) {
+  const headers = { "User-Agent": "ShipSaaS", Accept: "application/vnd.github.v3+json" };
+  if (token) headers.Authorization = `token ${token}`;
+
+  // Get the default branch's tree recursively
+  const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers });
+  if (!repoRes.ok) throw new Error(`Could not access repo: ${repoRes.status}`);
+  const repoData = await repoRes.json();
+  const branch = repoData.default_branch || "main";
+
+  const treeRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`, { headers });
+  if (!treeRes.ok) throw new Error(`Could not fetch file tree: ${treeRes.status}`);
+  const treeData = await treeRes.json();
+
+  // Filter to blobs (files) only, skip huge files (>500KB) and common non-deployable dirs
+  const skipDirs = ["node_modules/", ".git/", "dist/", "build/", ".next/", "__pycache__/"];
+  const blobs = (treeData.tree || []).filter(
+    (item) => item.type === "blob" && item.size < 500000 && !skipDirs.some((d) => item.path.startsWith(d))
+  );
+
+  // Fetch file contents (limit to 80 files to stay within Vercel payload limits)
+  const filesToFetch = blobs.slice(0, 80);
+  const files = await Promise.all(
+    filesToFetch.map(async (item) => {
+      try {
+        const blobRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/blobs/${item.sha}`, { headers });
+        if (!blobRes.ok) return null;
+        const blobData = await blobRes.json();
+        return { file: item.path, data: blobData.content, encoding: "base64" };
+      } catch {
+        return null;
+      }
+    })
+  );
+
+  return files.filter(Boolean);
+}
+
 app.post("/api/deploy", rateLimit, validate(deploySchema), async (req, res) => {
   try {
-    const { projectId, appName, hosting, vercelToken, githubToken, generatedCode } = req.body;
+    const { projectId, appName, hosting, vercelToken, githubToken, generatedCode, githubRepo, uploadedFiles } = req.body;
 
     // If no Vercel token, return a draft deployment
     if (!vercelToken) {
@@ -216,10 +274,40 @@ app.post("/api/deploy", rateLimit, validate(deploySchema), async (req, res) => {
     }
 
     // Build file tree for Vercel deployment
-    const files = [];
+    let files = [];
+    let sourceType = "template";
 
-    if (generatedCode) {
+    if (uploadedFiles && uploadedFiles.length > 0) {
+      // Deploy user-uploaded files
+      sourceType = "upload";
+      files = uploadedFiles.map((f) => ({
+        file: f.path,
+        data: Buffer.from(f.content).toString("base64"),
+        encoding: "base64",
+      }));
+    } else if (githubRepo) {
+      // Fetch real code from GitHub repo
+      sourceType = "github";
+      try {
+        const match = githubRepo.match(/github\.com\/([^/]+)\/([^/\s?#]+)/);
+        if (!match) throw new Error("Invalid GitHub URL");
+        const [, owner, repo] = match;
+        const cleanRepo = repo.replace(/\.git$/, "");
+        files = await fetchGitHubTree(owner, cleanRepo, githubToken);
+        if (files.length === 0) throw new Error("No deployable files found in repo");
+      } catch (ghErr) {
+        return res.json({
+          success: false,
+          error: `GitHub import failed: ${ghErr.message}`,
+          projectId,
+          appName,
+          deploymentUrl: null,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    } else if (generatedCode) {
       // Deploy the AI-generated code as index.html
+      sourceType = "ai";
       files.push({
         file: "index.html",
         data: Buffer.from(generatedCode).toString("base64"),
@@ -231,7 +319,7 @@ app.post("/api/deploy", rateLimit, validate(deploySchema), async (req, res) => {
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${appName || projectId}</title>
 <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#09090b;color:#fafafa}.c{text-align:center;max-width:480px;padding:2rem}h1{font-size:2rem;margin-bottom:1rem}p{color:#a1a1aa;line-height:1.6}</style>
-</head><body><div class="c"><h1>${appName || projectId}</h1><p>Deployed with Ship.io</p></div></body></html>`;
+</head><body><div class="c"><h1>${appName || projectId}</h1><p>Deployed with ShipSaaS</p></div></body></html>`;
       files.push({
         file: "index.html",
         data: Buffer.from(html).toString("base64"),
@@ -241,6 +329,7 @@ app.post("/api/deploy", rateLimit, validate(deploySchema), async (req, res) => {
 
     // Also create a GitHub repo if token is provided
     let githubRepoUrl = null;
+    const warnings = [];
     if (githubToken) {
       try {
         const ghRes = await fetch("https://api.github.com/user/repos", {
@@ -249,11 +338,11 @@ app.post("/api/deploy", rateLimit, validate(deploySchema), async (req, res) => {
             Authorization: `token ${githubToken}`,
             "Content-Type": "application/json",
             Accept: "application/vnd.github.v3+json",
-            "User-Agent": "Ship.io",
+            "User-Agent": "ShipSaaS",
           },
           body: JSON.stringify({
             name: projectId,
-            description: `${appName || projectId} — deployed with Ship.io`,
+            description: `${appName || projectId} — deployed with ShipSaaS`,
             private: false,
             auto_init: true,
           }),
@@ -261,11 +350,16 @@ app.post("/api/deploy", rateLimit, validate(deploySchema), async (req, res) => {
         if (ghRes.ok) {
           const ghData = await ghRes.json();
           githubRepoUrl = ghData.html_url;
+        } else {
+          const ghErr = await ghRes.json().catch(() => ({}));
+          const msg = ghRes.status === 422 ? `GitHub repo '${projectId}' already exists` : `GitHub repo creation failed: ${ghErr.message || ghRes.status}`;
+          warnings.push(msg);
+          console.error("GitHub:", msg);
         }
-        // If repo already exists (422), still continue
       } catch (ghErr) {
-        console.error("GitHub repo creation failed:", ghErr.message);
-        // Non-fatal — continue with deployment
+        const msg = `GitHub repo creation failed: ${ghErr.message}`;
+        warnings.push(msg);
+        console.error(msg);
       }
     }
 
@@ -310,6 +404,7 @@ app.post("/api/deploy", rateLimit, validate(deploySchema), async (req, res) => {
       githubRepoUrl,
       projectId,
       appName,
+      warnings: warnings.length > 0 ? warnings : undefined,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
@@ -427,6 +522,157 @@ app.post("/api/send-notification", rateLimit, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Email failed" });
+  }
+});
+
+// ─── Integration: Verify Provider Token ────────────────
+app.post("/api/integrations/verify", rateLimit, async (req, res) => {
+  const { provider, token } = req.body;
+  if (!provider || !token) return res.status(400).json({ error: "provider and token required" });
+
+  try {
+    let result = { connected: false, username: undefined, error: undefined };
+
+    switch (provider) {
+      case "vercel": {
+        const r = await fetch("https://api.vercel.com/v2/user", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (r.ok) {
+          const data = await r.json();
+          result = { connected: true, username: data.user?.username || data.user?.name };
+        } else {
+          result.error = "Invalid Vercel token";
+        }
+        break;
+      }
+      case "github": {
+        const r = await fetch("https://api.github.com/user", {
+          headers: { Authorization: `token ${token}`, "User-Agent": "ShipSaaS" },
+        });
+        if (r.ok) {
+          const data = await r.json();
+          result = { connected: true, username: data.login };
+        } else {
+          result.error = "Invalid GitHub token";
+        }
+        break;
+      }
+      case "cloudflare": {
+        const r = await fetch("https://api.cloudflare.com/client/v4/user/tokens/verify", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (r.ok) {
+          const data = await r.json();
+          result = { connected: data.success === true, username: data.result?.status || "Active" };
+        } else {
+          result.error = "Invalid Cloudflare token";
+        }
+        break;
+      }
+      case "stripe": {
+        if (token.startsWith("sk_")) {
+          result = { connected: true, username: token.startsWith("sk_live") ? "Live Mode" : "Test Mode" };
+        } else {
+          result.error = "Stripe key must start with sk_";
+        }
+        break;
+      }
+      default:
+        result = { connected: !!token, username: "API Key configured" };
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    res.json({ connected: false, error: "Verification failed" });
+  }
+});
+
+// ─── Integration: Domain Availability Search ───────────
+const dns = require("dns").promises;
+
+app.post("/api/integrations/domain-search", rateLimit, async (req, res) => {
+  const { domain } = req.body;
+  if (!domain || typeof domain !== "string" || domain.length > 63) {
+    return res.status(400).json({ error: "Valid domain name required" });
+  }
+
+  // Sanitize: only allow alphanumeric and hyphens
+  const clean = domain.replace(/[^a-z0-9-]/gi, "").toLowerCase();
+  if (!clean) return res.status(400).json({ error: "Invalid domain name" });
+
+  const tlds = [
+    { ext: ".com", price: "$12.99/yr" },
+    { ext: ".io", price: "$49.99/yr" },
+    { ext: ".ai", price: "$79.99/yr" },
+    { ext: ".app", price: "$14.99/yr" },
+    { ext: ".dev", price: "$12.99/yr" },
+  ];
+
+  const results = await Promise.all(
+    tlds.map(async ({ ext, price }) => {
+      const full = clean + ext;
+      try {
+        await dns.resolveNs(full);
+        // If NS records resolve, domain is registered
+        return { domain: full, tld: ext, available: false, price };
+      } catch (err) {
+        // ENOTFOUND / ENODATA = likely available
+        return { domain: full, tld: ext, available: err.code === "ENOTFOUND" || err.code === "ENODATA", price };
+      }
+    })
+  );
+
+  res.json({ results });
+});
+
+// ─── Integration: List Vercel Projects ─────────────────
+app.post("/api/integrations/vercel/projects", rateLimit, async (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).json({ error: "token required" });
+
+  try {
+    const r = await fetch("https://api.vercel.com/v9/projects?limit=20", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!r.ok) return res.status(400).json({ error: "Could not fetch projects" });
+    const data = await r.json();
+    const projects = (data.projects || []).map((p) => ({
+      name: p.name,
+      url: p.latestDeployments?.[0]?.url ? `https://${p.latestDeployments[0].url}` : null,
+      framework: p.framework,
+      updatedAt: p.updatedAt,
+    }));
+    res.json({ projects });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to list projects" });
+  }
+});
+
+// ─── Integration: List GitHub Repos ────────────────────
+app.post("/api/integrations/github/repos", rateLimit, async (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).json({ error: "token required" });
+
+  try {
+    const r = await fetch("https://api.github.com/user/repos?sort=updated&per_page=20", {
+      headers: { Authorization: `token ${token}`, "User-Agent": "ShipSaaS" },
+    });
+    if (!r.ok) return res.status(400).json({ error: "Could not fetch repos" });
+    const data = await r.json();
+    const repos = data.map((repo) => ({
+      name: repo.full_name,
+      url: repo.html_url,
+      private: repo.private,
+      language: repo.language,
+      updatedAt: repo.updated_at,
+    }));
+    res.json({ repos });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to list repos" });
   }
 });
 
